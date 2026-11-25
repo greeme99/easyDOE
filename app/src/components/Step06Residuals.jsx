@@ -14,7 +14,7 @@ export default function Step06Residuals({ reducedAnalysis, onPrev, onNext }) {
   if (!reducedAnalysis || !diag) {
     return (
       <div className="doe-card text-center py-12">
-        <p className="text-[#7c828a] mb-4">분석 가능한 데이터가 부족합니다.</p>
+        <p className="text-[#64748b] mb-4">분석 가능한 데이터가 부족합니다.</p>
         <button onClick={onPrev} className="doe-btn doe-btn-secondary">← 이전 단계</button>
       </div>
     );
@@ -25,16 +25,16 @@ export default function Step06Residuals({ reducedAnalysis, onPrev, onNext }) {
       <div className="doe-hero">
         <div className="doe-eyebrow">RESIDUAL ANALYSIS / 06</div>
         <h2 className="font-editorial text-2xl font-normal text-[#ffffff] mb-1">6단계 · 잔차분석 (모형 타당성 진단)</h2>
-        <p className="text-sm text-[#dbeafe]">정규성(Anderson-Darling), 등분산성(분산비), 독립성(자기상관)을 수치적으로 검정하고 4-in-1 진단 그래프로 검증합니다.</p>
+        <p className="text-sm text-[#e0e7ff]">정규성(Anderson-Darling), 등분산성(분산비), 독립성(자기상관)을 수치적으로 검정하고 4-in-1 진단 그래프로 검증합니다.</p>
       </div>
 
       <div className="doe-card">
         <ResidualFourInOneSvg observations={reducedAnalysis.observations} />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
-          <div className="p-4 rounded-2xl bg-[#f7f7f7] border border-[#dee1e6]">
-            <h4 className="font-semibold text-sm text-[#0a0b0d] mb-2">그래프별 정량 분석 결과</h4>
-            <ul className="text-xs text-[#5b616e] space-y-2 list-disc pl-4">
+          <div className="p-4 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0]">
+            <h4 className="font-semibold text-sm text-[#1e293b] mb-2">그래프별 정량 분석 결과</h4>
+            <ul className="text-xs text-[#475569] space-y-2 list-disc pl-4">
               <li>
                 <strong>① 정규확률도 (Normality)</strong>: Anderson-Darling AD = <span className="font-mono-num font-semibold">{diag.ad ? diag.ad.ad.toFixed(3) : '-'}</span>,
                 P = <span className="font-mono-num font-semibold">{diag.ad ? diag.ad.pVal.toFixed(3) : '-'}</span>{' '}
@@ -55,11 +55,11 @@ export default function Step06Residuals({ reducedAnalysis, onPrev, onNext }) {
             </ul>
           </div>
 
-          <div className={`p-4 rounded-2xl border ${diag.allOk ? 'bg-[#eef0f3] border-[#dee1e6]' : 'bg-amber-50 border-amber-200'}`}>
+          <div className={`p-4 rounded-2xl border ${diag.allOk ? 'bg-[#f1f5f9] border-[#e2e8f0]' : 'bg-amber-50 border-amber-200'}`}>
             <h4 className={`font-semibold text-sm flex items-center gap-1.5 mb-2 ${diag.allOk ? 'text-[#05b169]' : 'text-amber-800'}`}>
               {diag.allOk ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />} 종합 판정 결과
             </h4>
-            <p className="text-xs text-[#0a0b0d] leading-relaxed">
+            <p className="text-xs text-[#1e293b] leading-relaxed">
               {diag.allOk
                 ? `정규성(P=${diag.ad?.pVal.toFixed(3)}), 등분산성(분산비=${diag.varRatio.toFixed(2)}), 독립성(r=${diag.lag1.toFixed(3)}), 특이점(|d|=${diag.maxStd.toFixed(2)}) 기준을 모두 충족하여 수립된 축소 모형이 통계적으로 타당합니다.`
                 : '일부 잔차 진단 지표가 기준치를 벗어났습니다. 이상치 여부 또는 누락된 교호작용 항을 점검하세요.'}
@@ -91,7 +91,7 @@ export default function Step06Residuals({ reducedAnalysis, onPrev, onNext }) {
                   {reducedAnalysis.observations.map(o => (
                     <tr key={o.id}>
                       <td className="font-mono-num font-bold">{o.runOrder}</td>
-                      <td className="font-mono-num text-[#7c828a]">{o.stdOrder}</td>
+                      <td className="font-mono-num text-[#64748b]">{o.stdOrder}</td>
                       <td className="font-mono-num">{o.y.toFixed(2)}</td>
                       <td className="font-mono-num">{o.yHat.toFixed(3)}</td>
                       <td className={`font-mono-num font-bold ${o.resid >= 0 ? 'text-[#05b169]' : 'text-[#cf202f]'}`}>
@@ -113,7 +113,7 @@ export default function Step06Residuals({ reducedAnalysis, onPrev, onNext }) {
           )}
         </div>
 
-        <div className="flex justify-between mt-6 pt-4 border-t border-[#dee1e6]">
+        <div className="flex justify-between mt-6 pt-4 border-t border-[#e2e8f0]">
           <button onClick={onPrev} className="doe-btn doe-btn-secondary"><ArrowLeft size={16} /> 이전 단계 · 축소 모형</button>
           <button onClick={onNext} className="doe-btn doe-btn-primary">다음 단계 · 수학적 모형 <ArrowRight size={16} /></button>
         </div>

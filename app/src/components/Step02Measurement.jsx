@@ -83,15 +83,15 @@ export default function Step02Measurement({ project, updateProject, onPrev, onNe
       <div className="doe-hero">
         <div className="doe-eyebrow">MEASUREMENT / 02</div>
         <h2 className="font-editorial text-2xl font-normal text-[#ffffff] mb-1">2단계 · 실험 결과 입력</h2>
-        <p className="text-sm text-[#a8acb3]">측정된 반응치({design.responseName}, {design.responseUnit})를 엑셀로 일괄 업로드하거나 표에 직접 입력하세요.</p>
+        <p className="text-sm text-[#e0e7ff]">측정된 반응치({design.responseName}, {design.responseUnit})를 엑셀로 일괄 업로드하거나 표에 직접 입력하세요.</p>
       </div>
 
       <div className="doe-card">
-        <h3 className="font-editorial text-lg text-[#0a0b0d] mb-3">측정값 파일 업로드 (.xlsx)</h3>
+        <h3 className="font-editorial text-lg text-[#1e293b] mb-3">측정값 파일 업로드 (.xlsx)</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 rounded-lg bg-[#f7f7f7] border border-dashed border-[#dee1e6] flex items-center justify-between gap-3">
             <div>
-              <div className="font-semibold text-sm text-[#0a0b0d]">① 설계표 전체 업로드</div>
+              <div className="font-semibold text-sm text-[#1e293b]">① 설계표 전체 업로드</div>
               <div className="text-xs text-[#7c828a]">마지막 열의 반응치 Y를 자동 매칭합니다.</div>
             </div>
             <input ref={fullFileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={e => handleUploadExcel(e, 'full')} />
@@ -101,7 +101,7 @@ export default function Step02Measurement({ project, updateProject, onPrev, onNe
           </div>
           <div className="p-4 rounded-lg bg-[#f7f7f7] border border-dashed border-[#dee1e6] flex items-center justify-between gap-3">
             <div>
-              <div className="font-semibold text-sm text-[#0a0b0d]">② Y값만 업로드</div>
+              <div className="font-semibold text-sm text-[#1e293b]">② Y값만 업로드</div>
               <button onClick={downloadYTemplate} className="text-xs text-[#0052ff] underline font-semibold mt-0.5">
                 Y값 입력 양식 엑셀 받기
               </button>
@@ -117,7 +117,7 @@ export default function Step02Measurement({ project, updateProject, onPrev, onNe
       <div className="doe-card">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dee1e6] pb-3 mb-4">
           <div>
-            <h3 className="font-editorial text-lg text-[#0a0b0d]">
+            <h3 className="font-editorial text-lg text-[#1e293b]">
               {design.responseName} ({design.responseUnit}) 측정값 ({validCount} / {runs.length})
             </h3>
           </div>

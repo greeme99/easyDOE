@@ -72,7 +72,7 @@ export default function Step01Design({ project, updateProject, onNext }) {
       <div className="doe-hero">
         <div className="doe-eyebrow">EXPERIMENT DESIGN / 01</div>
         <h2 className="font-editorial text-2xl font-normal text-[#ffffff] mb-1">1단계 · 실험설계</h2>
-        <p className="text-sm text-[#a8acb3]">요인수, 수준, 반복수, 중심점 및 인자/반응치 정보를 설정하여 표준 또는 무작위 실험계획표를 생성합니다.</p>
+        <p className="text-sm text-[#e0e7ff]">요인수, 수준, 반복수, 중심점 및 인자/반응치 정보를 설정하여 표준 또는 무작위 실험계획표를 생성합니다.</p>
       </div>
 
       {/* Step-by-Step Guided Card */}
@@ -80,7 +80,7 @@ export default function Step01Design({ project, updateProject, onNext }) {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dee1e6] pb-3 mb-5">
           <div>
             <span className="text-xs font-bold tracking-wider uppercase text-[#0052ff]">STEP BY STEP · 실험설계 조건 입력</span>
-            <h3 className="font-editorial text-lg text-[#0a0b0d]">단계별 설계 조건 설정 ({String(subStep).padStart(2, '0')} / 08)</h3>
+            <h3 className="font-editorial text-lg text-[#1e293b]">단계별 설계 조건 설정 ({String(subStep).padStart(2, '0')} / 08)</h3>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => setSubStep(1)} className="doe-btn doe-btn-secondary text-xs py-1.5 px-3">1스텝으로 이동</button>
@@ -113,7 +113,7 @@ export default function Step01Design({ project, updateProject, onNext }) {
         <div className="p-5 rounded-lg bg-[#f7f7f7] border border-[#dee1e6]">
           {subStep === 1 && (
             <div className="space-y-3">
-              <label className="block text-sm font-semibold text-[#0a0b0d]">01 · DOE 종류</label>
+              <label className="block text-sm font-semibold text-[#1e293b]">01 · DOE 종류</label>
               <select
                 value={design.doeType}
                 onChange={e => updateProject({ design: { ...design, doeType: e.target.value } })}
@@ -129,7 +129,7 @@ export default function Step01Design({ project, updateProject, onNext }) {
 
           {subStep === 2 && (
             <div className="space-y-3">
-              <label className="block text-sm font-semibold text-[#0a0b0d]">02 · 인자수 (Factors)</label>
+              <label className="block text-sm font-semibold text-[#1e293b]">02 · 인자수 (Factors)</label>
               <div className="flex flex-wrap items-center gap-3">
                 <select
                   value={design.factorCount}
@@ -145,7 +145,7 @@ export default function Step01Design({ project, updateProject, onNext }) {
 
           {subStep === 3 && (
             <div className="space-y-3">
-              <label className="block text-sm font-semibold text-[#0a0b0d]">03 · 인자별 수준수 (Levels)</label>
+              <label className="block text-sm font-semibold text-[#1e293b]">03 · 인자별 수준수 (Levels)</label>
               <select value={design.levels} disabled className="doe-input w-full max-w-md">
                 <option value={2}>2수준 (−1 / +1)</option>
                 <option value={3} disabled>3수준 · 후속 개발 예정</option>
@@ -155,7 +155,7 @@ export default function Step01Design({ project, updateProject, onNext }) {
 
           {subStep === 4 && (
             <div className="space-y-3">
-              <label className="block text-sm font-semibold text-[#0a0b0d]">04 · 처리조합당 반복수 (Replications)</label>
+              <label className="block text-sm font-semibold text-[#1e293b]">04 · 처리조합당 반복수 (Replications)</label>
               <div className="flex flex-wrap items-center gap-3">
                 <select
                   value={design.replicates}
@@ -171,7 +171,7 @@ export default function Step01Design({ project, updateProject, onNext }) {
 
           {subStep === 5 && (
             <div className="space-y-3">
-              <label className="block text-sm font-semibold text-[#0a0b0d]">05 · 중심점 추가 횟수 (Center Points)</label>
+              <label className="block text-sm font-semibold text-[#1e293b]">05 · 중심점 추가 횟수 (Center Points)</label>
               <div className="flex items-center gap-3">
                 <input
                   type="number"
@@ -188,7 +188,7 @@ export default function Step01Design({ project, updateProject, onNext }) {
 
           {subStep === 6 && (
             <div className="space-y-3">
-              <label className="block text-sm font-semibold text-[#0a0b0d]">06 · 인자 이름 및 단위</label>
+              <label className="block text-sm font-semibold text-[#1e293b]">06 · 인자 이름 및 단위</label>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {design.factors.map((f, idx) => (
                   <div key={f.symbol} className="p-3 bg-white rounded-lg border border-[#dee1e6] space-y-2">
@@ -215,7 +215,7 @@ export default function Step01Design({ project, updateProject, onNext }) {
 
           {subStep === 7 && (
             <div className="space-y-3">
-              <label className="block text-sm font-semibold text-[#0a0b0d]">07 · 데이터 타입 및 수준 (-1 / +1 / 현재 조건)</label>
+              <label className="block text-sm font-semibold text-[#1e293b]">07 · 데이터 타입 및 수준 (-1 / +1 / 현재 조건)</label>
               <div className="doe-table-wrap">
                 <table className="doe-table">
                   <thead>
@@ -256,7 +256,7 @@ export default function Step01Design({ project, updateProject, onNext }) {
 
           {subStep === 8 && (
             <div className="space-y-3">
-              <label className="block text-sm font-semibold text-[#0a0b0d]">08 · 반응치 (Response Y) 정의</label>
+              <label className="block text-sm font-semibold text-[#1e293b]">08 · 반응치 (Response Y) 정의</label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-xl">
                 <div>
                   <span className="block text-xs text-[#7c828a] mb-1">반응치 이름</span>
@@ -287,7 +287,7 @@ export default function Step01Design({ project, updateProject, onNext }) {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dee1e6] pb-3 mb-4">
           <div>
             <span className="text-xs font-bold tracking-wider uppercase text-[#05b169]">DESIGN RESULT · 완성된 실험설계</span>
-            <h3 className="font-editorial text-lg text-[#0a0b0d]">
+            <h3 className="font-editorial text-lg text-[#1e293b]">
               {design.factorCount}인자 × 2수준 × {design.replicates}반복 + 중심점 {design.centerPoints}회 = 총 {totalRuns}회
             </h3>
           </div>

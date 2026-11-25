@@ -19,12 +19,9 @@ export function StartScreen({ savedProjects, onStartNew, onLoadProject, onOpenSa
     <div className="max-w-6xl mx-auto py-4">
       <div className="doe-hero">
         <div className="doe-eyebrow">DOE AGENT · FULL FACTORIAL WORKFLOW</div>
-        <h2 className="font-editorial text-2xl md:text-3xl font-normal text-[#ffffff] mb-3">
-          실험설계부터 최적 조건 검증까지
+        <h2 className="font-editorial text-2xl md:text-3xl font-normal text-[#ffffff] mb-6">
+          실험설계 ~ 최적조건 검증 ~ 보고서 작성까지 All-In-One 솔루션
         </h2>
-        <p className="text-[#a8acb3] text-sm md:text-base max-w-2xl mb-6">
-          실험 데이터를 분석하여 주요 인자를 파악하고, 최적 조건을 찾아 재현 실험으로 확인한 뒤 10장 분량의 PPT 보고서까지 한 번에 완성합니다.
-        </p>
         <div className="flex flex-wrap gap-3">
           <button onClick={onStartNew} className="doe-btn doe-btn-primary">
             <Play size={16} /> 실험설계 시작하기
@@ -40,44 +37,40 @@ export function StartScreen({ savedProjects, onStartNew, onLoadProject, onOpenSa
         </div>
       </div>
 
-      <div className="doe-card">
-        <div className="flex items-center justify-between border-b border-[#dee1e6] pb-3 mb-4">
-          <h3 className="font-editorial text-lg text-[#0a0b0d]">DOE LAB 10단계 분석 프로세스</h3>
-          <span className="text-xs text-[#7c828a]">브라우저 단독 실행 · 서버/로그인 불필요</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          {STEPS_PREVIEW.map(st => (
-            <div key={st.num} className="p-3.5 rounded-lg border border-[#dee1e6] bg-[#ffffff]">
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="w-6 h-6 rounded-full bg-[#0052ff] text-[#ffffff] text-xs font-bold flex items-center justify-center">
-                  {st.num}
-                </span>
-                <span className="font-semibold text-sm text-[#0a0b0d]">{st.title}</span>
-              </div>
-              <p className="text-xs text-[#7c828a] leading-relaxed">{st.desc}</p>
+      {/* 10-Step Workflow Feature Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5 mb-8">
+        {STEPS_PREVIEW.map(st => (
+          <div key={st.num} className="doe-card p-4 mb-0 flex flex-col justify-between hover:border-[#4555a2]">
+            <div>
+              <span className="font-mono-num text-xs font-bold text-[#4555a2] block mb-1">
+                STEP {st.num}
+              </span>
+              <h3 className="font-editorial text-sm font-semibold text-[#1e293b] mb-1.5">{st.title}</h3>
+              <p className="text-xs text-[#64748b] leading-relaxed">{st.desc}</p>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     </div>
   );
 }
 
 export function SaveListModal({ isOpen, onClose, savedProjects, onSelectProject, onDeleteProject, onImportFile }) {
-  const fileRef = useRef(null);
+  const fileInputRef = useRef(null);
+
   if (!isOpen) return null;
 
-  const handleFile = e => {
+  const handleFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = (evt) => {
       try {
-        const parsed = JSON.parse(ev.target.result);
+        const parsed = JSON.parse(evt.target.result);
         onImportFile(parsed);
         onClose();
-      } catch {
-        alert('유효한 .doe.json 파일이 아닙니다.');
+      } catch (err) {
+        alert('올바른 .doe.json 파일이 아닙니다.');
       }
     };
     reader.readAsText(file);
@@ -85,64 +78,84 @@ export function SaveListModal({ isOpen, onClose, savedProjects, onSelectProject,
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-[#ffffff] border border-[#dee1e6] rounded-xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-xl">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#dee1e6]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="bg-white rounded-3xl border border-[#e2e8f0] w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+        <div className="px-6 py-5 border-b border-[#e2e8f0] flex items-center justify-between bg-[#f8fafc]">
           <div>
-            <h3 className="font-editorial text-xl text-[#0a0b0d]">저장한 실험</h3>
-            <p className="text-xs text-[#7c828a]">저장 위치: 이 브라우저 로컬 스토리지 · 다른 사람의 작업과 분리됨</p>
+            <h3 className="font-editorial text-lg text-[#1e293b]">실험 저장 목록</h3>
+            <p className="text-xs text-[#64748b]">로컬 브라우저에 저장된 실험 프로젝트 관리 및 .doe.json 파일 불러오기</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#eef0f3] text-[#7c828a]">
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-[#e2e8f0] text-[#64748b]">
             <X size={20} />
           </button>
         </div>
 
-        <div className="px-6 py-3 bg-[#f7f7f7] border-b border-[#dee1e6] flex items-center justify-between">
-          <span className="text-xs text-[#7c828a]">외부 백업(.doe.json) 파일을 불러올 수 있습니다.</span>
-          <input ref={fileRef} type="file" accept=".json,.doe.json" className="hidden" onChange={handleFile} />
-          <button onClick={() => fileRef.current?.click()} className="doe-btn doe-btn-secondary text-xs py-1.5 px-3">
-            <Upload size={14} /> 실험 파일 가져오기 (.doe.json)
-          </button>
+        <div className="p-6 flex-1 overflow-y-auto space-y-3">
+          {savedProjects.length === 0 ? (
+            <div className="text-center py-12 text-[#64748b] text-sm">
+              저장된 실험 프로젝트가 없습니다.
+            </div>
+          ) : (
+            savedProjects.map(p => (
+              <div
+                key={p.id}
+                className="flex items-center justify-between p-4 rounded-2xl border border-[#e2e8f0] bg-white hover:border-[#4555a2] hover:shadow-sm transition"
+              >
+                <div className="flex-1 cursor-pointer mr-3" onClick={() => { onSelectProject(p); onClose(); }}>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm text-[#1e293b]">{p.name}</span>
+                    <span className="doe-badge-pool">{p.revision || 1}차 저장</span>
+                  </div>
+                  <div className="text-xs text-[#64748b] mt-1 flex flex-wrap gap-3">
+                    <span>인자: {p.design?.factorCount}개</span>
+                    <span>반복: {p.design?.replicates}회</span>
+                    <span>수정일: {new Date(p.updatedAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { onSelectProject(p); onClose(); }}
+                    className="doe-btn doe-btn-secondary text-xs py-1.5 px-3"
+                  >
+                    열기
+                  </button>
+                  {savedProjects.length > 1 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm(`'${p.name}' 실험을 삭제하시겠습니까?`)) {
+                          onDeleteProject(p.id);
+                        }
+                      }}
+                      className="p-2 text-[#cf202f] hover:bg-red-50 rounded-lg"
+                      title="삭제"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
-        <div className="p-6 overflow-y-auto space-y-3">
-          {savedProjects.map(p => (
-            <div
-              key={p.id}
-              className="p-4 rounded-lg border border-[#dee1e6] bg-white hover:border-[#0052ff] transition flex items-center justify-between gap-4"
-            >
-              <div className="min-w-0 flex-1 cursor-pointer" onClick={() => { onSelectProject(p); onClose(); }}>
-                <div className="flex items-center gap-2 mb-1">
-                  <FileJson size={16} className="text-[#0052ff] shrink-0" />
-                  <span className="font-semibold text-sm text-[#0a0b0d] truncate">{p.name}</span>
-                  <span className="doe-badge-sig">{p.tag || '저장됨'}</span>
-                </div>
-                <div className="text-xs text-[#7c828a] flex flex-wrap gap-3">
-                  <span>반응치: {p.design?.responseName} ({p.design?.responseUnit})</span>
-                  <span>총 {p.runs?.length || 0}회 실험</span>
-                  <span>{p.revision || 1}차 저장</span>
-                  <span>{new Date(p.updatedAt).toLocaleString('ko-KR')}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => { onSelectProject(p); onClose(); }}
-                  className="doe-btn doe-btn-primary text-xs py-1.5 px-3"
-                >
-                  불러오기
-                </button>
-                {p.id !== 'sample_film_49' && (
-                  <button
-                    onClick={() => onDeleteProject(p.id)}
-                    className="p-2 text-[#cf202f] hover:bg-red-50 rounded-lg"
-                    title="삭제"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
+        <div className="px-6 py-4 border-t border-[#e2e8f0] bg-[#f8fafc] flex flex-wrap items-center justify-between gap-3">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".json,.doe.json"
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="doe-btn doe-btn-secondary text-xs"
+          >
+            <Upload size={14} /> .doe.json 파일 불러오기
+          </button>
+          <button onClick={onClose} className="doe-btn doe-btn-dark text-xs">
+            닫기
+          </button>
         </div>
       </div>
     </div>

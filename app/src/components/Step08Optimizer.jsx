@@ -33,7 +33,7 @@ export default function Step08Optimizer({ project, updateProject, reducedAnalysi
   if (!reducedAnalysis) {
     return (
       <div className="doe-card text-center py-12">
-        <p className="text-[#7c828a] mb-4">분석 가능한 데이터가 부족합니다.</p>
+        <p className="text-[#64748b] mb-4">분석 가능한 데이터가 부족합니다.</p>
         <button onClick={onPrev} className="doe-btn doe-btn-secondary">← 이전 단계</button>
       </div>
     );
@@ -58,15 +58,15 @@ export default function Step08Optimizer({ project, updateProject, reducedAnalysi
       <div className="doe-hero">
         <div className="doe-eyebrow">RESPONSE OPTIMIZATION / 08</div>
         <h2 className="font-editorial text-2xl font-normal text-[#ffffff] mb-1">8단계 · 반응 최적화</h2>
-        <p className="text-sm text-[#a8acb3]">망대·망소·망목 목표와 탐색 범위를 설정하고, 실시간 시뮬레이터로 최적 공정 조건과 95% 신뢰구간을 산출합니다.</p>
+        <p className="text-sm text-[#e0e7ff]">망대·망소·망목 목표와 탐색 범위를 설정하고, 실시간 시뮬레이터로 최적 공정 조건과 95% 신뢰구간을 산출합니다.</p>
       </div>
 
       {/* Goal Settings */}
       <div className="doe-card">
-        <h3 className="font-editorial text-lg text-[#0a0b0d] mb-4">최적화 목표 설정</h3>
+        <h3 className="font-editorial text-lg text-[#1e293b] mb-4">최적화 목표 설정</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
           <div>
-            <label className="block text-xs font-semibold text-[#7c828a] mb-1">목표 유형</label>
+            <label className="block text-xs font-semibold text-[#64748b] mb-1">목표 유형</label>
             <select value={optimizer.goal} onChange={e => updateOpt({ goal: e.target.value })} className="doe-input w-full">
               <option value="target">망목 · 목표값 맞추기</option>
               <option value="maximize">망대 · 크게 할수록 좋음</option>
@@ -74,17 +74,17 @@ export default function Step08Optimizer({ project, updateProject, reducedAnalysi
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#7c828a] mb-1">반응 하한 (Lower)</label>
+            <label className="block text-xs font-semibold text-[#64748b] mb-1">반응 하한 (Lower)</label>
             <input type="number" step="any" value={optimizer.lowerBound} onChange={e => updateOpt({ lowerBound: parseFloat(e.target.value) || 0 })} className="doe-input w-full font-mono-num" />
           </div>
           {optimizer.goal === 'target' && (
             <div>
-              <label className="block text-xs font-semibold text-[#7c828a] mb-1">목표값 (Target)</label>
-              <input type="number" step="any" value={optimizer.targetVal} onChange={e => updateOpt({ targetVal: parseFloat(e.target.value) || 0 })} className="doe-input w-full font-mono-num font-bold text-[#0052ff]" />
+              <label className="block text-xs font-semibold text-[#64748b] mb-1">목표값 (Target)</label>
+              <input type="number" step="any" value={optimizer.targetVal} onChange={e => updateOpt({ targetVal: parseFloat(e.target.value) || 0 })} className="doe-input w-full font-mono-num font-bold text-[#4555a2]" />
             </div>
           )}
           <div>
-            <label className="block text-xs font-semibold text-[#7c828a] mb-1">반응 상한 (Upper)</label>
+            <label className="block text-xs font-semibold text-[#64748b] mb-1">반응 상한 (Upper)</label>
             <input type="number" step="any" value={optimizer.upperBound} onChange={e => updateOpt({ upperBound: parseFloat(e.target.value) || 0 })} className="doe-input w-full font-mono-num" />
           </div>
         </div>
@@ -95,227 +95,239 @@ export default function Step08Optimizer({ project, updateProject, reducedAnalysi
         </button>
 
         {showFixed && (
-          <div className="mt-4 p-4 rounded-lg bg-[#f7f7f7] border border-[#dee1e6] space-y-4">
-            <div className="flex items-center gap-3">
-              <label className="text-xs font-semibold text-[#0a0b0d]">만족도 가중치 (d weight):</label>
-              <input
-                type="number"
-                min={0.1}
-                max={10}
-                step={0.1}
-                value={optimizer.weight}
-                onChange={e => updateOpt({ weight: parseFloat(e.target.value) || 1 })}
-                className="doe-input w-24 font-mono-num"
-              />
-            </div>
-            <div className="doe-table-wrap">
-              <table className="doe-table">
-                <thead>
-                  <tr>
-                    <th>인자</th>
-                    <th>실제 실험 수준</th>
-                    <th>인자 고정</th>
-                    <th>고정 코드값 (−1 ~ +1)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {design.factors.map(f => {
-                    const cfg = optimizer.fixedFactors?.[f.symbol] || { fixed: false, codedVal: 0 };
-                    return (
-                      <tr key={f.symbol}>
-                        <td className="font-semibold">{f.symbol} · {f.name}</td>
-                        <td className="font-mono-num">{f.lowVal} ~ {f.highVal} {f.unit}</td>
-                        <td>
-                          <input
-                            type="checkbox"
-                            checked={!!cfg.fixed}
-                            onChange={e => updateOpt({
-                              fixedFactors: { ...optimizer.fixedFactors, [f.symbol]: { ...cfg, fixed: e.target.checked } }
-                            })}
-                            className="accent-[#0052ff] w-4 h-4"
-                          />
-                        </td>
-                        <td>
-                          <input
-                            type="number"
-                            min={-1}
-                            max={1}
-                            step={0.05}
-                            disabled={!cfg.fixed}
-                            value={cfg.codedVal ?? 0}
-                            onChange={e => updateOpt({
-                              fixedFactors: { ...optimizer.fixedFactors, [f.symbol]: { ...cfg, codedVal: parseFloat(e.target.value) || 0 } }
-                            })}
-                            className="doe-input w-24 font-mono-num text-center"
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+          <div className="mt-4 p-4 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0] space-y-3">
+            <div className="text-xs font-bold text-[#1e293b]">특정 인자 고정 (Fixed Factors)</div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {design.factors.map(f => {
+                const isFixed = optimizer.fixedFactors?.[f.symbol] !== undefined;
+                return (
+                  <div key={f.symbol} className="p-3 bg-white rounded-xl border border-[#e2e8f0]">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold">{f.symbol} · {f.name}</span>
+                      <input
+                        type="checkbox"
+                        checked={isFixed}
+                        onChange={e => {
+                          const next = { ...(optimizer.fixedFactors || {}) };
+                          if (e.target.checked) next[f.symbol] = 0;
+                          else delete next[f.symbol];
+                          updateOpt({ fixedFactors: next });
+                        }}
+                        className="accent-[#4555a2]"
+                      />
+                    </div>
+                    {isFixed && (
+                      <input
+                        type="number"
+                        min={-1}
+                        max={1}
+                        step={0.1}
+                        value={optimizer.fixedFactors[f.symbol]}
+                        onChange={e => {
+                          const next = { ...optimizer.fixedFactors, [f.symbol]: parseFloat(e.target.value) || 0 };
+                          updateOpt({ fixedFactors: next });
+                        }}
+                        className="doe-input w-full font-mono-num text-xs mt-1"
+                        placeholder="코드값 (−1 ~ +1)"
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
       </div>
 
-      {/* Interactive Simulator */}
-      <div className="doe-card">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dee1e6] pb-3 mb-4">
-          <h3 className="font-editorial text-lg text-[#0a0b0d]">최적화 예측 시뮬레이터</h3>
-          <div className="flex flex-wrap gap-2">
-            <button onClick={handleFindBest} className="doe-btn doe-btn-secondary text-xs">
-              <RotateCcw size={14} /> 자동 탐색 최적 조건으로 되돌리기
-            </button>
+      {/* Best Auto Solution Callout */}
+      {autoResult && (
+        <div className="doe-card bg-gradient-to-br from-[#4555a2] to-[#2b3b84] text-[#ffffff] border-transparent">
+          <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-3 border-b border-white/20">
+            <div>
+              <span className="text-xs font-bold uppercase tracking-wider text-[#dbeafe]">OPTIMAL SOLUTION · 자동 탐색 최적 조건</span>
+              <h3 className="font-editorial text-xl font-normal text-white">
+                도출된 최적 조건 및 예측 반응치
+              </h3>
+            </div>
             <button onClick={handleFindBest} className="doe-btn doe-btn-primary text-xs">
-              <Zap size={14} /> 최적 조건 찾기
+              <Zap size={14} /> 최적 조건으로 시뮬레이터 동기화
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-3.5 rounded-xl bg-white/10">
+              <div className="text-xs text-[#dbeafe]">최적 조건 예측값 Ŷ</div>
+              <div className="font-mono-num text-2xl font-bold text-white">
+                {autoResult.yHat.toFixed(2)} {design.responseUnit}
+              </div>
+            </div>
+            <div className="p-3.5 rounded-xl bg-white/10">
+              <div className="text-xs text-[#dbeafe]">복합 만족도 (Desirability D)</div>
+              <div className="font-mono-num text-2xl font-bold text-[#86efac]">
+                {autoResult.desirability.toFixed(4)}
+              </div>
+            </div>
+            <div className="p-3.5 rounded-xl bg-white/10 col-span-1 sm:col-span-2">
+              <div className="text-xs text-[#dbeafe] mb-1">인자별 최적 설정치</div>
+              <div className="text-xs font-mono-num text-white space-y-0.5">
+                {design.factors.map((f, i) => (
+                  <span key={f.symbol} className="inline-block mr-4">
+                    <strong>{f.symbol}</strong>={codedToActualVal(f, autoResult.coded[i])} {f.unit}
+                    <span className="text-[#cbd5e1] text-[10px]"> ({autoResult.coded[i] > 0 ? '+' : ''}{autoResult.coded[i].toFixed(2)})</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Simulator Card */}
+      <div className="doe-card">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e2e8f0] pb-3 mb-5">
+          <div>
+            <h3 className="font-editorial text-lg text-[#1e293b]">최적화 예측 시뮬레이터</h3>
+            <p className="text-xs text-[#64748b]">슬라이더를 조절하여 현장 공정 조건 변경에 따른 반응치 변화를 실시간으로 확인하세요.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={() => updateOpt({ selectedCoded: design.factors.map(() => 0) })} className="doe-btn doe-btn-secondary text-xs">
+              <RotateCcw size={14} /> 중심점(0)으로
+            </button>
+            <button onClick={handleFindBest} className="doe-btn doe-btn-dark text-xs">
+              <CheckCircle2 size={14} /> 최적 조건 적용
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+        {/* Sliders Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
           {design.factors.map((f, idx) => {
-            const xVal = currentCoded[idx] ?? 0;
-            const actVal = codedToActualVal(f, xVal);
-            // Mini curve points
-            const curvePts = [-1, -0.5, 0, 0.5, 1].map(xv => {
-              const vec = [...currentCoded];
-              vec[idx] = xv;
-              return { x: xv, y: predictFromModel(reducedAnalysis, vec) };
-            });
-            const ys = curvePts.map(p => p.y);
-            const yMin = Math.min(...ys) - 1, yMax = Math.max(...ys) + 1;
-            const px = x => 15 + ((x + 1) / 2) * 170;
-            const py = y => 12 + ((yMax - y) / Math.max(0.1, yMax - yMin)) * 56;
-
+            const cVal = currentCoded[idx];
+            const actualVal = codedToActualVal(f, cVal);
             return (
-              <div key={f.symbol} className="p-4 rounded-lg bg-[#ffffff] border border-[#dee1e6]">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-sm text-[#0a0b0d]">{f.symbol} · {f.name}</span>
-                  <span className="font-mono-num text-xs font-bold text-[#05b169]">
-                    {actVal} {f.unit !== '-' ? f.unit : ''}
+              <div key={f.symbol} className="p-4 rounded-2xl bg-[#f8fafc] border border-[#e2e8f0] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-[#4555a2]">{f.symbol}</span>
+                    <span className="text-sm font-semibold text-[#1e293b] ml-1.5">{f.name}</span>
+                  </div>
+                  <span className="font-mono-num text-sm font-bold text-[#4555a2]">
+                    {actualVal} {f.unit}
                   </span>
                 </div>
-                <input
-                  type="range"
-                  min={-1}
-                  max={1}
-                  step={f.type === 'categorical' ? 2 : 0.01}
-                  value={xVal}
-                  onChange={e => setSliderVal(idx, e.target.value)}
-                  className="doe-slider mb-2"
-                />
-                <div className="flex justify-between text-[11px] text-[#7c828a] font-mono-num mb-2">
-                  <span>{f.lowVal} (−1)</span>
-                  <span>x={xVal.toFixed(2)}</span>
-                  <span>{f.highVal} (+1)</span>
-                </div>
-                <svg viewBox="0 0 200 80" className="w-full h-16 bg-white rounded border border-[#eef0f3]">
-                  <polyline
-                    fill="none"
-                    stroke="#0052ff"
-                    strokeWidth="2"
-                    points={curvePts.map(p => `${px(p.x)},${py(p.y)}`).join(' ')}
-                  />
-                  <line x1={px(xVal)} y1={6} x2={px(xVal)} y2={74} stroke="#05b169" strokeDasharray="3 2" />
-                  <circle cx={px(xVal)} cy={py(intervals.yHat)} r="4" fill="#05b169" />
-                </svg>
+
+                {f.type === 'categorical' ? (
+                  <div className="grid grid-cols-2 gap-2 pt-2">
+                    <button
+                      onClick={() => setSliderVal(idx, -1)}
+                      className={`doe-btn py-1.5 text-xs ${cVal === -1 ? 'doe-btn-primary' : 'doe-btn-secondary'}`}
+                    >
+                      {f.lowVal} (−1)
+                    </button>
+                    <button
+                      onClick={() => setSliderVal(idx, 1)}
+                      className={`doe-btn py-1.5 text-xs ${cVal === 1 ? 'doe-btn-primary' : 'doe-btn-secondary'}`}
+                    >
+                      {f.highVal} (+1)
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="range"
+                      min={-1}
+                      max={1}
+                      step={0.05}
+                      value={cVal}
+                      onChange={e => setSliderVal(idx, e.target.value)}
+                      className="doe-slider"
+                    />
+                    <div className="flex justify-between text-[11px] text-[#64748b] mt-1 font-mono-num">
+                      <span>{f.lowVal} (−1)</span>
+                      <span>코드 {cVal > 0 ? '+' : ''}{cVal.toFixed(2)}</span>
+                      <span>{f.highVal} (+1)</span>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
 
-        {/* Live KPI */}
-        <div className="p-6 rounded-2xl bg-gradient-to-br from-[#2d428f] to-[#0052ff] text-[#ffffff] grid grid-cols-1 md:grid-cols-3 gap-4 items-center mb-5">
-          <div>
-            <div className="text-xs text-[#dbeafe]">최적 조건의 예측 평균 Ŷ</div>
-            <div className="font-mono-num text-3xl font-bold text-[#ffffff]">
-              {intervals.yHat.toFixed(3)} <span className="text-sm font-normal text-[#dbeafe]">{design.responseUnit}</span>
+        {/* Real-time Simulator Output Banner */}
+        <div className="p-5 rounded-2xl bg-[#f1f5f9] border border-[#e2e8f0] mb-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <div className="text-xs text-[#64748b]">현재 조건 예측값 Ŷ</div>
+              <div className="font-mono-num text-2xl font-bold text-[#4555a2]">
+                {intervals.yHat.toFixed(2)} {design.responseUnit}
+              </div>
             </div>
-          </div>
-          <div>
-            <div className="text-xs text-[#dbeafe]">목표와의 편차</div>
-            <div className="font-mono-num text-xl font-bold">
-              {optimizer.goal === 'target' ? `${diffFromTarget >= 0 ? '+' : ''}${diffFromTarget.toFixed(3)}` : '극대화/극소화 모드'}
+            <div>
+              <div className="text-xs text-[#64748b]">목표값 대비 편차</div>
+              <div className={`font-mono-num text-2xl font-bold ${Math.abs(diffFromTarget) < 0.5 ? 'text-[#05b169]' : 'text-[#cf202f]'}`}>
+                {diffFromTarget >= 0 ? '+' : ''}{diffFromTarget.toFixed(2)}
+              </div>
             </div>
-          </div>
-          <div className="flex md:justify-end">
-            <button onClick={onNext} className="doe-btn bg-white text-[#0052ff] hover:bg-[#eef0f3]">
-              <CheckCircle2 size={16} /> 최종 최적 조건으로 선정 → 9단계
-            </button>
+            <div>
+              <div className="text-xs text-[#64748b]">95% 신뢰구간 (CI)</div>
+              <div className="font-mono-num text-sm font-semibold text-[#1e293b] pt-1">
+                [{intervals.ciLow.toFixed(2)} ~ {intervals.ciHigh.toFixed(2)}]
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-[#64748b]">95% 예측구간 (PI)</div>
+              <div className="font-mono-num text-sm font-semibold text-[#1e293b] pt-1">
+                [{intervals.piLow.toFixed(2)} ~ {intervals.piHigh.toFixed(2)}]
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Comparison Table: Auto vs Current */}
+        {/* Side-by-Side Comparison Table */}
         {autoResult && (
           <div className="doe-table-wrap mb-4">
             <table className="doe-table">
               <thead>
                 <tr>
                   <th>구분</th>
-                  {design.factors.map(f => (
-                    <th key={f.symbol}>{f.symbol} · {f.name}</th>
-                  ))}
                   <th>예측 반응치 (Ŷ)</th>
-                  <th>만족도 (d)</th>
+                  {design.factors.map(f => (
+                    <th key={f.symbol}>{f.symbol} ({f.name})</th>
+                  ))}
+                  <th>목표 편차</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td className="font-semibold text-[#0052ff]">자동 탐색 최적 조건</td>
-                  {design.factors.map((f, idx) => (
+                <tr className="bg-blue-50/40">
+                  <td className="font-semibold text-left text-[#4555a2]">자동 탐색 최적 조건</td>
+                  <td className="font-mono-num font-bold text-[#4555a2]">{autoResult.yHat.toFixed(2)} {design.responseUnit}</td>
+                  {design.factors.map((f, i) => (
                     <td key={f.symbol} className="font-mono-num">
-                      {codedToActualVal(f, autoResult.coded[idx])} ({autoResult.coded[idx].toFixed(2)})
+                      {codedToActualVal(f, autoResult.coded[i])} {f.unit}
                     </td>
                   ))}
-                  <td className="font-mono-num font-bold">{autoResult.yHat.toFixed(3)}</td>
-                  <td className="font-mono-num">{autoResult.desirability.toFixed(3)}</td>
+                  <td className="font-mono-num font-semibold">
+                    {(autoResult.yHat - optimizer.targetVal).toFixed(2)}
+                  </td>
                 </tr>
-                <tr className="bg-[#f7f7f7]">
-                  <td className="font-semibold text-[#0a0b0d]">현재 시뮬레이터 조건</td>
-                  {design.factors.map((f, idx) => (
+                <tr>
+                  <td className="font-semibold text-left">현재 시뮬레이터 조절치</td>
+                  <td className="font-mono-num font-bold text-[#1e293b]">{intervals.yHat.toFixed(2)} {design.responseUnit}</td>
+                  {design.factors.map((f, i) => (
                     <td key={f.symbol} className="font-mono-num">
-                      {codedToActualVal(f, currentCoded[idx])} ({currentCoded[idx].toFixed(2)})
+                      {codedToActualVal(f, currentCoded[i])} {f.unit}
                     </td>
                   ))}
-                  <td className="font-mono-num font-bold text-[#05b169]">{intervals.yHat.toFixed(3)}</td>
-                  <td className="font-mono-num">{autoResult.desirability.toFixed(3)}</td>
+                  <td className="font-mono-num font-semibold">
+                    {diffFromTarget >= 0 ? '+' : ''}{diffFromTarget.toFixed(2)}
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
         )}
 
-        {/* Comparison Table & CI/PI */}
-        <button onClick={() => setShowCI(v => !v)} className="doe-btn doe-btn-secondary text-xs">
-          {showCI ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          예측값 계산 및 신뢰구간(95% CI / PI) 보기
-        </button>
-
-        {showCI && (
-          <div className="mt-4 doe-table-wrap">
-            <table className="doe-table">
-              <thead>
-                <tr>
-                  <th>예측 평균 (Ŷ)</th>
-                  <th>SE Fit</th>
-                  <th>평균의 95% 신뢰구간 (95% CI)</th>
-                  <th>개별 관측값의 95% 예측구간 (95% PI)</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td className="font-mono-num font-bold text-[#0052ff]">{intervals.yHat.toFixed(3)}</td>
-                  <td className="font-mono-num">{intervals.seFit.toFixed(3)}</td>
-                  <td className="font-mono-num">({intervals.ciLow.toFixed(3)}, {intervals.ciHigh.toFixed(3)})</td>
-                  <td className="font-mono-num">({intervals.piLow.toFixed(3)}, {intervals.piHigh.toFixed(3)})</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        <div className="flex justify-between mt-6 pt-4 border-t border-[#dee1e6]">
+        <div className="flex justify-between mt-6 pt-4 border-t border-[#e2e8f0]">
           <button onClick={onPrev} className="doe-btn doe-btn-secondary"><ArrowLeft size={16} /> 이전 단계 · 수학적 모형</button>
           <button onClick={onNext} className="doe-btn doe-btn-primary">다음 단계 · 재현 실험 및 가설검정 <ArrowRight size={16} /></button>
         </div>

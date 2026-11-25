@@ -154,22 +154,22 @@ export default function App() {
   }, [project.design.factors, project.runs, project.pooledKeys, project.alpha]);
 
   return (
-    <div className="min-h-screen bg-[#ffffff] text-[#5b616e]">
+    <div className="min-h-screen bg-[#ffffff] text-[#475569]">
       {/* Persistent Top Header */}
-      <header className="bg-white border-b border-[#dee1e6] sticky top-0 z-30">
+      <header className="bg-white border-b border-[#e2e8f0] sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#0052ff] text-[#ffffff] font-bold text-xs flex items-center justify-center tracking-wider">
+            <div className="w-10 h-10 rounded-xl bg-[#4555a2] text-[#ffffff] font-bold text-xs flex items-center justify-center tracking-wider shadow-sm">
               DOE
             </div>
             <div>
-              <h1 className="text-base md:text-lg font-bold text-[#0052ff] leading-tight">
+              <h1 className="text-base md:text-lg font-bold text-[#4555a2] leading-tight">
                 현장에서 쉽게 즉시 사용하는 easyDOE
               </h1>
-              <div className="text-xs text-[#7c828a]">
+              <div className="text-xs text-[#64748b]">
                 {project.name}_{project.revision || 1}차.doe.json ·{' '}
                 {isDirty ? (
-                  <span className="text-[#0052ff] font-semibold">변경 사항 있음 · 실험 저장 필요</span>
+                  <span className="text-[#4555a2] font-semibold">변경 사항 있음 · 실험 저장 필요</span>
                 ) : (
                   <span className="text-[#05b169]">저장 완료</span>
                 )}

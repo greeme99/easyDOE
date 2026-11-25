@@ -2,13 +2,14 @@ import React from 'react';
 import { probit } from '../doeEngine';
 
 const C = {
-  primary: '#0052ff',
-  primarySoft: '#3b82f6',
-  up: '#05b169',
-  down: '#cf202f',
-  ink: '#0a0b0d',
-  muted: '#7c828a',
-  grid: '#eef0f3',
+  brand: '#4555a2',       // User's provided slate indigo/blue
+  brandDark: '#2b3b84',
+  primary: '#0052ff',     // Vibrant blue accent
+  up: '#05b169',          // Green (success / significant / mean line)
+  down: '#cf202f',        // Red (target / threshold line)
+  ink: '#1e293b',         // Dark slate ink (never harsh black)
+  muted: '#64748b',       // Soft slate
+  grid: '#e2e8f0',        // Clean hairline border
   bg: '#ffffff',
 };
 
@@ -36,7 +37,7 @@ function ticks(min, max, count = 5) {
 // 1. Main Effects Plot (Multi-panel SVG)
 export function MainEffectsSvg({ factors, runs, grandMean }) {
   const validRuns = runs.filter(r => !r.isCenter && Number.isFinite(parseFloat(r.y)));
-  if (!validRuns.length) return <div className="text-sm text-[#7c828a] p-6 text-center">유효한 실험 데이터가 없습니다.</div>;
+  if (!validRuns.length) return <div className="text-sm text-[#64748b] p-6 text-center">유효한 실험 데이터가 없습니다.</div>;
 
   const panelW = 200;
   const H = 220;
@@ -56,7 +57,7 @@ export function MainEffectsSvg({ factors, runs, grandMean }) {
   const yToPx = y => padT + ((yMax - y) / (yMax - yMin)) * (H - padT - padB);
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#dee1e6]">
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#e2e8f0]">
       {ticks(yMin, yMax, 5).map((tv, i) => {
         const y = yToPx(tv);
         return (
@@ -80,7 +81,7 @@ export function MainEffectsSvg({ factors, runs, grandMean }) {
         return (
           <g key={m.f.symbol}>
             <rect x={x0 + 6} y={padT} width={panelW - 14} height={H - padT - padB} fill="none" stroke={C.grid} />
-            <text x={(x1 + x2) / 2} y={20} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.ink}>
+            <text x={(x1 + x2) / 2} y={20} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.brand}>
               {m.f.symbol}: {m.f.name}
             </text>
             <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={C.primary} strokeWidth="2.5" />
@@ -114,7 +115,7 @@ export function InteractionMatrixSvg({ factors, runs }) {
   const W = cols * cellW, H = rows * cellH;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#dee1e6]">
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#e2e8f0]">
       {pairs.map(([f1, f2], idx) => {
         const col = idx % cols;
         const row = Math.floor(idx / cols);
@@ -132,8 +133,8 @@ export function InteractionMatrixSvg({ factors, runs }) {
 
         return (
           <g key={`${f1.symbol}${f2.symbol}`}>
-            <rect x={ox + 8} y={oy + 8} width={cellW - 16} height={cellH - 16} rx="12" fill="#f7f7f7" stroke={C.grid} />
-            <text x={ox + cellW / 2} y={oy + 24} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.ink}>
+            <rect x={ox + 8} y={oy + 8} width={cellW - 16} height={cellH - 16} rx="12" fill="#f8fafc" stroke={C.grid} />
+            <text x={ox + cellW / 2} y={oy + 24} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.brand}>
               {f1.symbol} × {f2.symbol} ({f1.name} × {f2.name})
             </text>
             <line x1={ox + 44} y1={pyTop} x2={ox + 44} y2={pyBot} stroke={C.grid} />
@@ -145,16 +146,16 @@ export function InteractionMatrixSvg({ factors, runs }) {
             <circle cx={px1} cy={yToPx(d11)} r="4" fill={C.primary} />
             <circle cx={px2} cy={yToPx(d21)} r="4" fill={C.primary} />
 
-            <line x1={px1} y1={yToPx(d12)} x2={px2} y2={yToPx(d22)} stroke={C.up} strokeWidth="2.3" strokeDasharray="5 3" />
-            <circle cx={px1} cy={yToPx(d12)} r="4" fill={C.up} />
-            <circle cx={px2} cy={yToPx(d22)} r="4" fill={C.up} />
+            <line x1={px1} y1={yToPx(d12)} x2={px2} y2={yToPx(d22)} stroke={C.brand} strokeWidth="2.3" strokeDasharray="5 3" />
+            <circle cx={px1} cy={yToPx(d12)} r="4" fill={C.brand} />
+            <circle cx={px2} cy={yToPx(d22)} r="4" fill={C.brand} />
 
             <text x={px1} y={pyBot + 14} textAnchor="middle" fontSize="9.5" fill={C.muted}>{f1.symbol}:{f1.lowVal}</text>
             <text x={px2} y={pyBot + 14} textAnchor="middle" fontSize="9.5" fill={C.muted}>{f1.symbol}:{f1.highVal}</text>
 
             <text x={ox + cellW / 2} y={oy + cellH - 12} textAnchor="middle" fontSize="9" fill={C.ink}>
               <tspan fill={C.primary}>● {f2.symbol}={f2.lowVal}</tspan>
-              <tspan dx="10" fill={C.up}>◆ {f2.symbol}={f2.highVal}</tspan>
+              <tspan dx="10" fill={C.brand}>◆ {f2.symbol}={f2.highVal}</tspan>
             </text>
           </g>
         );
@@ -197,7 +198,7 @@ export function CubePlotSvg({ factors, runs }) {
   ];
 
   return (
-    <svg viewBox="0 0 460 270" className="w-full max-w-[520px] h-auto bg-white rounded-2xl border border-[#dee1e6]">
+    <svg viewBox="0 0 460 270" className="w-full max-w-[520px] h-auto bg-white rounded-2xl border border-[#e2e8f0]">
       {edges.map(([k1, k2], i) => {
         const isBack = (k1 === '---' && k2 === '-+-') || (k1 === '-+-' && k2 === '++-') || (k1 === '-+-' && k2 === '-++');
         return (
@@ -205,7 +206,7 @@ export function CubePlotSvg({ factors, runs }) {
             key={i}
             x1={pts[k1].x} y1={pts[k1].y}
             x2={pts[k2].x} y2={pts[k2].y}
-            stroke={isBack ? '#a8acb3' : C.ink}
+            stroke={isBack ? '#cbd5e1' : C.brand}
             strokeWidth={isBack ? '1.3' : '1.8'}
             strokeDasharray={isBack ? '4 3' : undefined}
           />
@@ -215,21 +216,21 @@ export function CubePlotSvg({ factors, runs }) {
         const isMax = p.val !== null && Math.abs(p.val - maxVal) < 1e-6;
         return (
           <g key={k}>
-            <circle cx={p.x} cy={p.y} r={isMax ? '7' : '5'} fill={isMax ? C.primary : C.ink} stroke="#fff" strokeWidth="1.5" />
-            <rect x={p.x - 24} y={p.y - 25} width="48" height="17" rx="8" fill={isMax ? C.primary : C.ink} />
+            <circle cx={p.x} cy={p.y} r={isMax ? '7' : '5'} fill={isMax ? C.primary : C.brand} stroke="#fff" strokeWidth="1.5" />
+            <rect x={p.x - 24} y={p.y - 25} width="48" height="17" rx="8" fill={isMax ? C.primary : C.brand} />
             <text x={p.x} y={p.y - 13} textAnchor="middle" fontSize="10" fontWeight="600" fill="#fff">
               {p.val !== null ? p.val.toFixed(2) : '-'}
             </text>
           </g>
         );
       })}
-      <text x={front.x0 + front.w / 2} y={front.y0 + 24} textAnchor="middle" fontSize="11" fontWeight="600" fill={C.ink}>
+      <text x={front.x0 + front.w / 2} y={front.y0 + 24} textAnchor="middle" fontSize="11" fontWeight="600" fill={C.brand}>
         {fA.symbol}: {fA.name} ({fA.lowVal} → {fA.highVal})
       </text>
-      <text x={front.x0 + front.w + dx + 12} y={front.y0 + dy / 2 + 12} textAnchor="start" fontSize="10.5" fontWeight="600" fill={C.ink}>
+      <text x={front.x0 + front.w + dx + 12} y={front.y0 + dy / 2 + 12} textAnchor="start" fontSize="10.5" fontWeight="600" fill={C.brand}>
         {fB.symbol}: {fB.name}
       </text>
-      <text x={front.x0 - 16} y={front.y0 - front.h / 2} textAnchor="end" fontSize="10.5" fontWeight="600" fill={C.ink}>
+      <text x={front.x0 - 16} y={front.y0 - front.h / 2} textAnchor="end" fontSize="10.5" fontWeight="600" fill={C.brand}>
         {fC.symbol}: {fC.name}
       </text>
     </svg>
@@ -252,8 +253,8 @@ export function ParetoSvg({ termResults, tCrit }) {
   const barW = W - padL - padR;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#dee1e6]">
-      <text x={padL + barW / 2} y={16} textAnchor="middle" fontSize="11" fontWeight="600" fill={C.ink}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#e2e8f0]">
+      <text x={padL + barW / 2} y={16} textAnchor="middle" fontSize="11" fontWeight="600" fill={C.brand}>
         {useT ? '표준화 효과 파레토도 (|T|)' : '효과 크기 파레토도 (|Effect|)'}
       </text>
       {items.map((it, idx) => {
@@ -263,7 +264,7 @@ export function ParetoSvg({ termResults, tCrit }) {
         return (
           <g key={it.key}>
             <text x={padL - 8} y={y + 15} textAnchor="end" fontSize="10.5" fontWeight="600" fill={C.ink}>{it.key}</text>
-            <rect x={padL} y={y + 2} width={Math.max(2, w)} height={18} rx="4" fill={isSig ? C.primary : '#a8acb3'} />
+            <rect x={padL} y={y + 2} width={Math.max(2, w)} height={18} rx="4" fill={isSig ? C.primary : '#94a3b8'} />
             <text x={padL + w + 6} y={y + 15} fontSize="10" fontWeight="600" fill={C.ink}>{it.mag.toFixed(2)}</text>
           </g>
         );
@@ -311,8 +312,8 @@ export function NormalProbSvg({ points, title = '정규확률도', xLabel = '값
   const sd = Math.sqrt(pts.reduce((s, p) => s + (p.val - mean) ** 2, 0) / Math.max(1, n - 1)) || 1;
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#dee1e6]">
-      <text x={W / 2} y={18} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.ink}>{title}</text>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#e2e8f0]">
+      <text x={W / 2} y={18} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.brand}>{title}</text>
       {pctTicks.map(pt => {
         const z = probit(pt.p);
         return (
@@ -332,7 +333,7 @@ export function NormalProbSvg({ points, title = '정규확률도', xLabel = '값
           {p.sig ? (
             <rect x={xPx(p.val) - 4} y={yPx(p.z) - 4} width="8" height="8" fill={C.down} />
           ) : (
-            <circle cx={xPx(p.val)} cy={yPx(p.z)} r="4" fill={C.primary} />
+            <circle cx={xPx(p.val)} cy={yPx(p.z)} r="4" fill={C.brand} opacity="0.85" />
           )}
           {p.label && (
             <text x={xPx(p.val) + 6} y={yPx(p.z) + 3} fontSize="9.5" fill={C.ink} fontWeight={p.sig ? '600' : '400'}>
@@ -375,21 +376,21 @@ export function ResidualFourInOneSvg({ observations }) {
         title="① 잔차의 정규확률도"
         xLabel="잔차 (Residual)"
       />
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#dee1e6]">
-        <text x={W / 2} y={18} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.ink}>② 잔차 대 적합치 (Residuals vs Fits)</text>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#e2e8f0]">
+        <text x={W / 2} y={18} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.brand}>② 잔차 대 적합치 (Residuals vs Fits)</text>
         <line x1={padL} y1={ry(0)} x2={W - padR} y2={ry(0)} stroke={C.down} strokeDasharray="4 3" />
         <line x1={padL} y1={padT} x2={padL} y2={H - padB} stroke={C.grid} />
         <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke={C.grid} />
         <text x={padL - 5} y={ry(rMax) + 4} textAnchor="end" fontSize="9.5" fill={C.muted}>{rMax.toFixed(1)}</text>
         <text x={padL - 5} y={ry(rMin)} textAnchor="end" fontSize="9.5" fill={C.muted}>{rMin.toFixed(1)}</text>
         {observations.map((o, i) => (
-          <circle key={i} cx={fx(o.yHat)} cy={ry(o.resid)} r="4" fill={C.primary} />
+          <circle key={i} cx={fx(o.yHat)} cy={ry(o.resid)} r="4" fill={C.brand} />
         ))}
         <text x={W / 2} y={H - 8} textAnchor="middle" fontSize="10" fill={C.muted}>적합치 (Fitted Value)</text>
       </svg>
 
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#dee1e6]">
-        <text x={W / 2} y={18} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.ink}>③ 잔차 히스토그램 (Histogram)</text>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#e2e8f0]">
+        <text x={W / 2} y={18} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.brand}>③ 잔차 히스토그램 (Histogram)</text>
         <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke={C.grid} />
         {counts.map((c, idx) => {
           const bw = (W - padL - padR) / bins;
@@ -398,7 +399,7 @@ export function ResidualFourInOneSvg({ observations }) {
           const y = H - padB - bh;
           return (
             <g key={idx}>
-              <rect x={x} y={y} width={bw - 8} height={bh} rx="4" fill={C.primary} />
+              <rect x={x} y={y} width={bw - 8} height={bh} rx="4" fill={C.brand} opacity="0.85" />
               <text x={x + (bw - 8) / 2} y={H - padB + 12} textAnchor="middle" fontSize="9" fill={C.muted}>
                 {(minR + (idx + 0.5) * binW).toFixed(1)}
               </text>
@@ -408,12 +409,12 @@ export function ResidualFourInOneSvg({ observations }) {
         <text x={W / 2} y={H - 6} textAnchor="middle" fontSize="10" fill={C.muted}>잔차 구간</text>
       </svg>
 
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#dee1e6]">
-        <text x={W / 2} y={18} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.ink}>④ 잔차 대 관측순서 (Residuals vs Order)</text>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#e2e8f0]">
+        <text x={W / 2} y={18} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.brand}>④ 잔차 대 관측순서 (Residuals vs Order)</text>
         <line x1={padL} y1={ry(0)} x2={W - padR} y2={ry(0)} stroke={C.down} strokeDasharray="4 3" />
         <polyline
           fill="none"
-          stroke={C.primary}
+          stroke={C.brand}
           strokeWidth="1.8"
           points={observations.map((o, i) => {
             const x = padL + (i / Math.max(1, observations.length - 1)) * (W - padL - padR);
@@ -422,7 +423,7 @@ export function ResidualFourInOneSvg({ observations }) {
         />
         {observations.map((o, i) => {
           const x = padL + (i / Math.max(1, observations.length - 1)) * (W - padL - padR);
-          return <circle key={i} cx={x} cy={ry(o.resid)} r="3.5" fill={C.ink} />;
+          return <circle key={i} cx={x} cy={ry(o.resid)} r="3.5" fill={C.brand} />;
         })}
         <text x={W / 2} y={H - 8} textAnchor="middle" fontSize="10" fill={C.muted}>관측 순서 (Run Order)</text>
       </svg>
@@ -440,18 +441,18 @@ export function ConfirmationChartsSvg({ values, mu0, tResult }) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#dee1e6]">
-        <text x={W / 2} y={18} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.ink}>회차별 재현 실험 측정값</text>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#e2e8f0]">
+        <text x={W / 2} y={18} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.brand}>회차별 재현 실험 측정값</text>
         <line x1={padL} y1={yPx(mu0)} x2={W - padR} y2={yPx(mu0)} stroke={C.down} strokeDasharray="5 3" strokeWidth="1.5" />
         <line x1={padL} y1={yPx(mean)} x2={W - padR} y2={yPx(mean)} stroke={C.up} strokeWidth="1.5" />
         <polyline
           fill="none"
-          stroke={C.primary}
+          stroke={C.brand}
           strokeWidth="1.6"
           points={values.map((v, i) => `${padL + (i / Math.max(1, values.length - 1)) * (W - padL - padR)},${yPx(v)}`).join(' ')}
         />
         {values.map((v, i) => (
-          <circle key={i} cx={padL + (i / Math.max(1, values.length - 1)) * (W - padL - padR)} cy={yPx(v)} r="3.2" fill={C.primary} />
+          <circle key={i} cx={padL + (i / Math.max(1, values.length - 1)) * (W - padL - padR)} cy={yPx(v)} r="3.2" fill={C.brand} />
         ))}
         <text x={padL - 5} y={yPx(yMax) + 4} textAnchor="end" fontSize="9.5" fill={C.muted}>{yMax.toFixed(1)}</text>
         <text x={padL - 5} y={yPx(yMin)} textAnchor="end" fontSize="9.5" fill={C.muted}>{yMin.toFixed(1)}</text>
@@ -462,8 +463,8 @@ export function ConfirmationChartsSvg({ values, mu0, tResult }) {
       </svg>
 
       {tResult && (
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#dee1e6]">
-          <text x={W / 2} y={18} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.ink}>재현 실험 상자 그림 및 95% 신뢰구간 vs H₀</text>
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#e2e8f0]">
+          <text x={W / 2} y={18} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.brand}>재현 실험 상자 그림 및 95% 신뢰구간 vs H₀</text>
           {(() => {
             const [xMin, xMax] = niceRange([tResult.min, tResult.max, mu0], 0.18);
             const xPx = v => padL + ((v - xMin) / (xMax - xMin)) * (W - padL - padR);
@@ -471,9 +472,9 @@ export function ConfirmationChartsSvg({ values, mu0, tResult }) {
             return (
               <g>
                 <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke={C.grid} />
-                <line x1={xPx(tResult.min)} y1={midY} x2={xPx(tResult.max)} y2={midY} stroke={C.ink} strokeWidth="1.5" />
-                <rect x={xPx(tResult.q1)} y={midY - 22} width={Math.max(4, xPx(tResult.q3) - xPx(tResult.q1))} height="44" fill="#eef0f3" stroke={C.primary} strokeWidth="1.8" rx="6" />
-                <line x1={xPx(tResult.median)} y1={midY - 22} x2={xPx(tResult.median)} y2={midY + 22} stroke={C.ink} strokeWidth="2" />
+                <line x1={xPx(tResult.min)} y1={midY} x2={xPx(tResult.max)} y2={midY} stroke={C.brand} strokeWidth="1.5" />
+                <rect x={xPx(tResult.q1)} y={midY - 22} width={Math.max(4, xPx(tResult.q3) - xPx(tResult.q1))} height="44" fill="#f1f5f9" stroke={C.brand} strokeWidth="1.8" rx="6" />
+                <line x1={xPx(tResult.median)} y1={midY - 22} x2={xPx(tResult.median)} y2={midY + 22} stroke={C.brand} strokeWidth="2.5" />
                 <line x1={xPx(tResult.ciLow)} y1={midY + 38} x2={xPx(tResult.ciHigh)} y2={midY + 38} stroke={C.up} strokeWidth="3" />
                 <circle cx={xPx(tResult.mean)} cy={midY + 38} r="4.5" fill={C.up} />
                 <line x1={xPx(mu0)} y1={padT + 6} x2={xPx(mu0)} y2={H - padB} stroke={C.down} strokeWidth="2" strokeDasharray="4 3" />
@@ -508,8 +509,8 @@ export function ConfirmationHistogramSvg({ values, mu0 }) {
   const xPx = v => padL + ((v - minV) / span) * (W - padL - padR);
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#dee1e6]">
-      <text x={W / 2} y={18} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.ink}>재현 실험 측정값 히스토그램</text>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto bg-white rounded-2xl border border-[#e2e8f0]">
+      <text x={W / 2} y={18} textAnchor="middle" fontSize="11.5" fontWeight="600" fill={C.brand}>재현 실험 측정값 히스토그램</text>
       <line x1={padL} y1={H - padB} x2={W - padR} y2={H - padB} stroke={C.grid} />
       {counts.map((c, idx) => {
         const bw = (W - padL - padR) / bins;
@@ -518,7 +519,7 @@ export function ConfirmationHistogramSvg({ values, mu0 }) {
         const y = H - padB - bh;
         return (
           <g key={idx}>
-            <rect x={x} y={y} width={bw - 6} height={bh} rx="4" fill={C.primary} opacity="0.85" />
+            <rect x={x} y={y} width={bw - 6} height={bh} rx="4" fill={C.brand} opacity="0.85" />
             <text x={x + (bw - 6) / 2} y={H - padB + 13} textAnchor="middle" fontSize="9" fill={C.muted}>
               {(minV + (idx + 0.5) * binW).toFixed(1)}
             </text>
