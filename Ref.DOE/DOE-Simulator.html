@@ -1,0 +1,3556 @@
+<!DOCTYPE html>
+
+<html lang="ko">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>2³ 요인실험(DOE) 동적 변수화 및 10단계 반응 최적화 시스템</title>
+
+  <!-- Chart.js CDN -->
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+
+    :root {
+
+      --primary: #2563eb;
+
+      --primary-dark: #1d4ed8;
+
+      --secondary: #64748b;
+
+      --success: #10b981;
+
+      --danger: #ef4444;
+
+      --warning: #f59e0b;
+
+      --bg: #f8fafc;
+
+      --card-bg: #ffffff;
+
+      --border: #e2e8f0;
+
+      --text: #1e293b;
+
+      --text-muted: #64748b;
+
+    }
+
+
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+    body { background-color: var(--bg); color: var(--text); line-height: 1.6; padding: 24px; }
+
+    .container { max-width: 1280px; margin: 0 auto; }
+
+
+
+    header { margin-bottom: 20px; text-align: center; }
+
+    header h1 { font-size: 1.75rem; color: var(--primary-dark); margin-bottom: 6px; }
+
+    header p { color: var(--text-muted); font-size: 0.95rem; }
+
+
+
+    /* 단계 네비게이션 버튼 바 */
+
+    .step-nav {
+
+      display: grid;
+
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+
+      gap: 8px;
+
+      margin-bottom: 24px;
+
+    }
+
+
+
+    .step-btn {
+
+      background: var(--card-bg);
+
+      border: 2px solid var(--border);
+
+      border-radius: 10px;
+
+      padding: 10px 8px;
+
+      text-align: left;
+
+      cursor: pointer;
+
+      transition: all 0.2s ease;
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 6px;
+
+    }
+
+    .step-btn:hover {
+
+      border-color: #93c5fd;
+
+      background: #eff6ff;
+
+    }
+
+    .step-btn.active {
+
+      border-color: var(--primary);
+
+      background: #eff6ff;
+
+      box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.15);
+
+    }
+
+    .step-num {
+
+      width: 24px;
+
+      height: 24px;
+
+      border-radius: 50%;
+
+      background: #e2e8f0;
+
+      color: var(--text-muted);
+
+      font-size: 0.75rem;
+
+      font-weight: 700;
+
+      display: flex;
+
+      align-items: center;
+
+      justify-content: center;
+
+      flex-shrink: 0;
+
+    }
+
+    .step-btn.active .step-num {
+
+      background: var(--primary);
+
+      color: #ffffff;
+
+    }
+
+    .step-title {
+
+      font-size: 0.82rem;
+
+      font-weight: 600;
+
+      color: var(--text);
+
+      white-space: nowrap;
+
+    }
+
+    .step-btn.active .step-title {
+
+      color: var(--primary-dark);
+
+    }
+
+
+
+    /* 카드 및 내용 영역 */
+
+    .step-content {
+
+      display: none;
+
+      animation: fadeIn 0.25s ease;
+
+    }
+
+    .step-content.active {
+
+      display: block;
+
+    }
+
+    @keyframes fadeIn {
+
+      from { opacity: 0; transform: translateY(6px); }
+
+      to { opacity: 1; transform: translateY(0); }
+
+    }
+
+
+
+    .card {
+
+      background: var(--card-bg);
+
+      border-radius: 12px;
+
+      border: 1px solid var(--border);
+
+      padding: 24px;
+
+      margin-bottom: 20px;
+
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+
+    }
+
+    .card-header {
+
+      display: flex;
+
+      justify-content: space-between;
+
+      align-items: center;
+
+      border-bottom: 2px solid var(--border);
+
+      padding-bottom: 12px;
+
+      margin-bottom: 18px;
+
+      flex-wrap: wrap;
+
+      gap: 12px;
+
+    }
+
+    .card-title {
+
+      font-size: 1.18rem;
+
+      font-weight: 700;
+
+      color: var(--text);
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 8px;
+
+    }
+
+
+
+    /* 테이블 스타일 */
+
+    .table-responsive {
+
+      overflow-x: auto;
+
+      margin-top: 10px;
+
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; text-align: center; }
+
+    th, td { padding: 9px 10px; border: 1px solid var(--border); }
+
+    th { background: #f8fafc; font-weight: 600; }
+
+    tr:hover { background-color: #f8fafc; }
+
+
+
+    .input-yield, .input-factor, .input-rep, .input-opt {
+
+      width: 100%;
+
+      max-width: 110px;
+
+      padding: 5px 8px;
+
+      text-align: center;
+
+      border: 1.5px solid #cbd5e1;
+
+      border-radius: 6px;
+
+      font-weight: 600;
+
+      color: var(--text);
+
+    }
+
+    .input-yield {
+
+      max-width: 75px;
+
+      font-weight: 700;
+
+      color: var(--primary);
+
+    }
+
+    .input-rep {
+
+      max-width: 90px;
+
+      font-weight: 700;
+
+      color: var(--primary-dark);
+
+    }
+
+    .input-opt {
+
+      max-width: 140px;
+
+      text-align: left;
+
+    }
+
+    .input-yield:focus, .input-factor:focus, .input-rep:focus, .input-opt:focus {
+
+      outline: none;
+
+      border-color: var(--primary);
+
+    }
+
+
+
+    /* 버튼 스타일 */
+
+    .btn {
+
+      background: var(--primary);
+
+      color: white;
+
+      border: none;
+
+      padding: 8px 16px;
+
+      border-radius: 8px;
+
+      cursor: pointer;
+
+      font-weight: 600;
+
+      font-size: 0.88rem;
+
+      transition: background 0.2s;
+
+    }
+
+    .btn:hover { background: var(--primary-dark); }
+
+    .btn-secondary { background: var(--secondary); }
+
+    .btn-preset { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; margin-right: 4px; }
+
+    .btn-preset:hover { background: #c7d2fe; }
+
+    .btn-success { background: var(--success); }
+
+    .btn-success:hover { background: #059669; }
+
+
+
+    /* 네비게이션 푸터 */
+
+    .nav-footer {
+
+      display: flex;
+
+      justify-content: space-between;
+
+      margin-top: 24px;
+
+      padding-top: 16px;
+
+      border-top: 1px solid var(--border);
+
+    }
+
+
+
+    /* 그리드 및 차트 박스 */
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+    @media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+
+
+    .chart-box {
+
+      background: #ffffff;
+
+      border: 1px solid var(--border);
+
+      border-radius: 8px;
+
+      padding: 16px;
+
+      min-height: 280px;
+
+    }
+
+    .chart-box h4 {
+
+      text-align: center;
+
+      font-size: 0.92rem;
+
+      margin-bottom: 12px;
+
+      color: var(--text-muted);
+
+    }
+
+
+
+    .badge-sig { background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 12px; font-weight: 700; font-size: 0.78rem; }
+
+    .badge-ns { background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 0.78rem; }
+
+    .badge-pooled { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 12px; font-weight: 600; font-size: 0.78rem; }
+
+
+
+    .info-callout {
+
+      background: #eff6ff;
+
+      border-left: 4px solid var(--primary);
+
+      padding: 12px 16px;
+
+      font-size: 0.88rem;
+
+      color: #1e40af;
+
+      margin-bottom: 16px;
+
+      border-radius: 0 8px 8px 0;
+
+    }
+
+    .rep-setting-bar {
+
+      background: #f1f5f9;
+
+      border: 1px solid var(--border);
+
+      border-radius: 8px;
+
+      padding: 12px 16px;
+
+      margin-bottom: 16px;
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 16px;
+
+      flex-wrap: wrap;
+
+    }
+
+    .diag-box {
+
+      background: #f0fdf4;
+
+      border: 1px solid #bbf7d0;
+
+      border-radius: 8px;
+
+      padding: 14px 18px;
+
+      margin-top: 16px;
+
+    }
+
+    .stats-summary {
+
+      display: flex;
+
+      gap: 16px;
+
+      margin-top: 14px;
+
+      background: #f8fafc;
+
+      padding: 12px 16px;
+
+      border-radius: 8px;
+
+      border: 1px solid var(--border);
+
+      flex-wrap: wrap;
+
+    }
+
+    .stats-item { font-size: 0.9rem; font-weight: 600; }
+
+    .stats-item span { color: var(--primary); }
+
+
+
+    /* 10단계 반응 최적화 전용 스타일 */
+
+    .opt-control-panel {
+
+      background: #f8fafc;
+
+      border: 1px solid var(--border);
+
+      border-radius: 10px;
+
+      padding: 18px;
+
+      margin-bottom: 20px;
+
+    }
+
+    .opt-grid-controls {
+
+      display: grid;
+
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+
+      gap: 16px;
+
+      margin-top: 12px;
+
+    }
+
+    .opt-card-result {
+
+      background: #f0fdf4;
+
+      border: 2px solid #34d399;
+
+      border-radius: 12px;
+
+      padding: 20px;
+
+      margin-bottom: 20px;
+
+    }
+
+    .opt-card-result h3 {
+
+      color: #065f46;
+
+      font-size: 1.15rem;
+
+      margin-bottom: 12px;
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 8px;
+
+    }
+
+    .opt-value-badge {
+
+      display: inline-block;
+
+      background: #10b981;
+
+      color: white;
+
+      font-weight: 700;
+
+      padding: 4px 12px;
+
+      border-radius: 20px;
+
+      font-size: 1rem;
+
+    }
+
+    .sim-slider-group {
+
+      margin-bottom: 16px;
+
+    }
+
+    .sim-slider-label {
+
+      display: flex;
+
+      justify-content: space-between;
+
+      font-size: 0.88rem;
+
+      font-weight: 600;
+
+      margin-bottom: 6px;
+
+    }
+
+    .sim-slider {
+
+      width: 100%;
+
+      accent-color: var(--primary);
+
+    }
+
+  </style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+  <header>
+
+    <h1>2³ 요인실험(DOE) 및 동적 잔차 진단 시스템</h1>
+
+    <p id="headerSubtitle">인자 변수 및 실험 반복수 설정에 따라 분석 및 모델 타당성 검증이 자동 연동됩니다.</p>
+
+  </header>
+
+
+
+  <!-- 단계 네비게이션 탭 버튼 바 -->
+
+  <div class="step-nav">
+
+    <button class="step-btn active" onclick="switchStep(1)"><div class="step-num">1</div><div class="step-title">실험설계</div></button>
+
+    <button class="step-btn" onclick="switchStep(2)"><div class="step-num">2</div><div class="step-title">데이터 입력</div></button>
+
+    <button class="step-btn" onclick="switchStep(3)"><div class="step-num">3</div><div class="step-title">주효과 계산</div></button>
+
+    <button class="step-btn" onclick="switchStep(4)"><div class="step-num">4</div><div class="step-title">교호효과 계산</div></button>
+
+    <button class="step-btn" onclick="switchStep(5)"><div class="step-num">5</div><div class="step-title">ANOVA & F-검정</div></button>
+
+    <button class="step-btn" onclick="switchStep(6)"><div class="step-num">6</div><div class="step-title">주효과 그래프</div></button>
+
+    <button class="step-btn" onclick="switchStep(7)"><div class="step-num">7</div><div class="step-title">교호작용 그래프</div></button>
+
+    <button class="step-btn" onclick="switchStep(8)"><div class="step-num">8</div><div class="step-title">잔차분석</div></button>
+
+    <button class="step-btn" onclick="switchStep(9)"><div class="step-num">9</div><div class="step-title">결과분석</div></button>
+
+    <button class="step-btn" onclick="switchStep(10)"><div class="step-num">10</div><div class="step-title">반응 최적화</div></button>
+
+  </div>
+
+
+
+  <!-- 1단계: 실험설계 -->
+
+  <div class="step-content active" id="step1">
+
+    <div class="card">
+
+      <div class="card-header">
+
+        <div class="card-title">📌 1단계: 2³ 요인실험(DOE) 인자 및 반복수(Replicate) 설정</div>
+
+        <button class="btn" onclick="applyFactorSettings()">설정 적용 및 2단계 이동 →</button>
+
+      </div>
+
+
+
+      <div class="rep-setting-bar">
+
+        <label for="replicateCountSelect" style="font-weight:700; color:var(--text);">🔄 처리조합당 실험 반복수(r):</label>
+
+        <select id="replicateCountSelect" class="input-rep" onchange="updateReplicatesFromInput()">
+
+          <option value="1">1회 (반복 없음, 총 8 runs)</option>
+
+          <option value="2">2회 반복 (총 16 runs)</option>
+
+          <option value="3">3회 반복 (총 24 runs)</option>
+
+          <option value="4">4회 반복 (총 32 runs)</option>
+
+        </select>
+
+        <span style="font-size:0.85rem; color:var(--text-muted);">* 반복수가 2회 이상일 경우 오차항(Pure Error) 분산이 자동 반영됩니다.</span>
+
+      </div>
+
+
+
+      <div class="info-callout">
+
+        💡 인자명, 데이터 타입, 저수준(-1), 고수준(+1), 단위 및 실험 반복수를 설정하세요. 변경 사항은 2단계 데이터 입력 및 이후 전체 통계 분석에 반영됩니다.
+
+      </div>
+
+
+
+      <div class="table-responsive">
+
+        <table style="margin-bottom:20px;">
+
+          <thead>
+
+            <tr>
+
+              <th>인자 기호</th>
+
+              <th>인자명 (Factor Name)</th>
+
+              <th>데이터 타입</th>
+
+              <th>저수준 (-1)</th>
+
+              <th>고수준 (+1)</th>
+
+              <th>단위 / 비고</th>
+
+            </tr>
+
+          </thead>
+
+          <tbody id="factorConfigTableBody"></tbody>
+
+        </table>
+
+      </div>
+
+
+
+      <h4 style="margin-top:16px; margin-bottom:8px;">동적 생성된 표준 실험 계획 행렬 (Yates Standard Order)</h4>
+
+      <div class="table-responsive">
+
+        <table>
+
+          <thead>
+
+            <tr id="designTableHeader">
+
+              <th>표준순서 (Run)</th><th>처리조합</th><th>A</th><th>B</th><th>C</th><th>A 부호</th><th>B 부호</th><th>C 부호</th>
+
+            </tr>
+
+          </thead>
+
+          <tbody id="designTableBody"></tbody>
+
+        </table>
+
+      </div>
+
+
+
+      <div class="nav-footer">
+
+        <div></div>
+
+        <button class="btn" onclick="applyFactorSettings()">다음: 데이터 입력 →</button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- 2단계: 데이터 입력 -->
+
+  <div class="step-content" id="step2">
+
+    <div class="card">
+
+      <div class="card-header">
+
+        <div class="card-title">📝 2단계: 실험 데이터(반응치 Y) 입력</div>
+
+        <div>
+
+          <button class="btn" onclick="calculateDOE()">수치 업데이트</button>
+
+          <button class="btn btn-secondary" onclick="resetDefault()">기본값 복원</button>
+
+        </div>
+
+      </div>
+
+      <div class="info-callout">
+
+        설정된 반복수에 따라 측정된 <strong>반응치(Y) 데이터</strong>를 입력하면 효과 계산, ANOVA, 잔차 분석 및 그래프가 연동되어 업데이트됩니다.
+
+      </div>
+
+      <div class="table-responsive">
+
+        <table>
+
+          <thead>
+
+            <tr id="inputTableHeader"></tr>
+
+          </thead>
+
+          <tbody id="inputTableBody"></tbody>
+
+        </table>
+
+      </div>
+
+
+
+      <div class="nav-footer">
+
+        <button class="btn btn-secondary" onclick="switchStep(1)">← 이전: 실험설계(인자설정)</button>
+
+        <button class="btn" onclick="switchStep(3)">다음: 주효과 계산 →</button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- 3단계: 주효과 계산 -->
+
+  <div class="step-content" id="step3">
+
+    <div class="card">
+
+      <div class="card-header"><div class="card-title">🧮 3단계: 주효과(Main Effect) 계산 결과</div></div>
+
+      <div class="info-callout">
+
+        <strong>반복수($r$) 반영 주효과 산출식</strong>: 
+
+        $\text{Contrast} = \sum (\text{Sign} \times \sum Y), \quad \text{Effect} = \frac{\text{Contrast}}{4r}, \quad \beta = \frac{\text{Effect}}{2}, \quad \text{SS} = \frac{\text{Contrast}^2}{8r}$
+
+      </div>
+
+      <div class="table-responsive">
+
+        <table>
+
+          <thead>
+
+            <tr><th>인자</th><th>저수준 평균 ($\bar{Y}_{-}$)</th><th>고수준 평균 ($\bar{Y}_{+}$)</th><th>대비 (Contrast)</th><th>주효과 (Effect)</th><th>회귀계수 ($\beta$)</th><th>제곱합 (SS)</th><th>기여율 (%)</th></tr>
+
+          </thead>
+
+          <tbody id="mainEffectsTableBody"></tbody>
+
+        </table>
+
+      </div>
+
+
+
+      <div class="nav-footer">
+
+        <button class="btn btn-secondary" onclick="switchStep(2)">← 이전: 데이터 입력</button>
+
+        <button class="btn" onclick="switchStep(4)">다음: 교호효과 계산 →</button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- 4단계: 교호효과 계산 -->
+
+  <div class="step-content" id="step4">
+
+    <div class="card">
+
+      <div class="card-header"><div class="card-title">🔗 4단계: 교호작용(Interaction Effect) 계산 결과</div></div>
+
+      <div class="info-callout">
+
+        2개 이상 인자의 결합 효과를 검증합니다 ($r$회 반복 데이터 감안).
+
+      </div>
+
+      <div class="table-responsive">
+
+        <table>
+
+          <thead>
+
+            <tr><th>교호작용 구분</th><th>부호 규칙</th><th>대비 (Contrast)</th><th>교호효과 (Effect)</th><th>회귀계수 ($\beta$)</th><th>제곱합 (SS)</th><th>기여율 (%)</th></tr>
+
+          </thead>
+
+          <tbody id="interEffectsTableBody"></tbody>
+
+        </table>
+
+      </div>
+
+
+
+      <div class="nav-footer">
+
+        <button class="btn btn-secondary" onclick="switchStep(3)">← 이전: 주효과 계산</button>
+
+        <button class="btn" onclick="switchStep(5)">다음: 분산분석 & F-검정 →</button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- 5단계: 분산분석 & F-검정 -->
+
+  <div class="step-content" id="step5">
+
+    <div class="card">
+
+      <div class="card-header">
+
+        <div class="card-title">📊 5단계: 분산분석표 (ANOVA Table) 및 F-검정</div>
+
+        <div>
+
+          <span style="font-size:0.85rem; color:var(--text-muted); margin-right:6px;">모델 선택 프리셋:</span>
+
+          <button class="btn btn-preset" onclick="setPreset('all')">전체 요인 선택 (포화/풀모델)</button>
+
+          <button class="btn btn-preset" onclick="setPreset('recommended')">유의 요인 선별 (A, B, C, AC)</button>
+
+          <button class="btn btn-preset" onclick="setPreset('mainOnly')">주효과 전용</button>
+
+        </div>
+
+      </div>
+
+      <div class="info-callout">
+
+        💡 <strong>모든 요인 및 교호작용 항목이 기본적으로 선택(checked)되어 있습니다.</strong> 원하시는 변수 조합에 따라 체크박스를 해제하면 오차항(Pooled Error)에 자동 합산되며, 체크된 변수는 9단계 회귀식 및 10단계 반응 최적화에 적용됩니다.
+
+      </div>
+
+      <div class="table-responsive">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th style="width:60px;">포함</th>
+
+              <th>요인 (Source)</th>
+
+              <th>자유도 (DF)</th>
+
+              <th style="background:#e0e7ff; color:#3730a3;">회귀계수 ($\beta$)</th>
+
+              <th>제곱합 (Adj SS)</th>
+
+              <th>평균제곱 (MS)</th>
+
+              <th>F-통계량 (F₀)</th>
+
+              <th>P-값 (P-value)</th>
+
+              <th>기여율 (%)</th>
+
+              <th>유의성 판정 (α=0.05)</th>
+
+            </tr>
+
+          </thead>
+
+          <tbody id="anovaTableBody"></tbody>
+
+          <tfoot>
+
+            <tr style="background:#fefce8; font-weight:bold;">
+
+              <td>-</td><td>잔차 오차 (Residual Error)</td><td id="errorDF">3</td><td>-</td><td id="errorSS">5.00</td><td id="errorMS">1.67</td><td>-</td><td>-</td><td id="errorContrib">0.38%</td><td><span class="badge-pooled">기준 오차</span></td>
+
+            </tr>
+
+            <tr style="background:#f1f5f9; font-weight:bold;">
+
+              <td>-</td><td>총합 (Total)</td><td id="totalDF">7</td><td>-</td><td id="totalSS">1317.50</td><td id="totalMS">188.21</td><td>-</td><td>-</td><td>100.00%</td><td>-</td>
+
+            </tr>
+
+          </tfoot>
+
+        </table>
+
+      </div>
+
+
+
+      <div class="stats-summary">
+
+        <div class="stats-item">절편 ($\beta_0$): <span id="valBeta0">64.25</span></div>
+
+        <div class="stats-item">표준오차 S: <span id="valS">1.29</span></div>
+
+        <div class="stats-item">결정계수 R²: <span id="valR2">99.62%</span></div>
+
+        <div class="stats-item">수정 결정계수 R²(adj): <span id="valR2Adj">99.11%</span></div>
+
+        <div class="stats-item">임계치 F₀.₀₅: <span id="valFCrit">10.13</span></div>
+
+        <div class="stats-item">총 데이터 수 N: <span id="valN">8</span></div>
+
+      </div>
+
+
+
+      <div class="nav-footer">
+
+        <button class="btn btn-secondary" onclick="switchStep(4)">← 이전: 교호효과 계산</button>
+
+        <button class="btn" onclick="switchStep(6)">다음: 주효과 그래프 →</button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- 6단계: 주효과 그래프 -->
+
+  <div class="step-content" id="step6">
+
+    <div class="card">
+
+      <div class="card-header"><div class="card-title">📈 6단계: 주효과도 (Main Effects Plots)</div></div>
+
+      <div class="info-callout">
+
+        기울기가 가파를수록 반응치에 미치는 영향이 큽니다.
+
+      </div>
+
+      <div class="grid-3">
+
+        <div class="chart-box"><h4 id="titleMainA">주효과: A</h4><canvas id="mainAChart"></canvas></div>
+
+        <div class="chart-box"><h4 id="titleMainB">주효과: B</h4><canvas id="mainBChart"></canvas></div>
+
+        <div class="chart-box"><h4 id="titleMainC">주효과: C</h4><canvas id="mainCChart"></canvas></div>
+
+      </div>
+
+      <div class="nav-footer">
+
+        <button class="btn btn-secondary" onclick="switchStep(5)">← 이전: 분산분석 & F-검정</button>
+
+        <button class="btn" onclick="switchStep(7)">다음: 교호작용 그래프 →</button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- 7단계: 교호작용 그래프 -->
+
+  <div class="step-content" id="step7">
+
+    <div class="card">
+
+      <div class="card-header"><div class="card-title">📉 7단계: 교호작용도 (Interaction Plots)</div></div>
+
+      <div class="info-callout">
+
+        두 직선이 평행하지 않고 교차하거나 기울기가 다르면 교호작용이 존재함을 의미합니다.
+
+      </div>
+
+      <div class="grid-3">
+
+        <div class="chart-box"><h4 id="titleInterAB">교호작용: A × B</h4><canvas id="interABChart"></canvas></div>
+
+        <div class="chart-box"><h4 id="titleInterAC">교호작용: A × C</h4><canvas id="interACChart"></canvas></div>
+
+        <div class="chart-box"><h4 id="titleInterBC">교호작용: B × C</h4><canvas id="interBCChart"></canvas></div>
+
+      </div>
+
+      <div class="nav-footer">
+
+        <button class="btn btn-secondary" onclick="switchStep(6)">← 이전: 주효과 그래프</button>
+
+        <button class="btn" onclick="switchStep(8)">다음: 잔차분석 (모형 타당성) →</button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- 8단계: 잔차분석 -->
+
+  <div class="step-content" id="step8">
+
+    <div class="card">
+
+      <div class="card-header"><div class="card-title">🔬 8단계: 잔차 분석 및 모형 타당성 진단 (4-in-1 Diagnostics)</div></div>
+
+      <div class="info-callout">
+
+        분산분석(ANOVA) 모형이 유효하려면 정규성, 등분산성, 독립성 가정을 충족해야 합니다.
+
+      </div>
+
+
+
+      <div class="grid-2">
+
+        <div class="chart-box">
+
+          <h4>① 정규확률도 (Normal Probability Plot)</h4>
+
+          <canvas id="normProbChart"></canvas>
+
+        </div>
+
+        <div class="chart-box">
+
+          <h4>② 잔차 대 적합치 (Residuals vs Fits)</h4>
+
+          <canvas id="resVsFitChart"></canvas>
+
+        </div>
+
+      </div>
+
+      <div class="grid-2" style="margin-top:16px;">
+
+        <div class="chart-box">
+
+          <h4>③ 잔차 대 관측순서 (Residuals vs Order)</h4>
+
+          <canvas id="resVsOrderChart"></canvas>
+
+        </div>
+
+        <div class="chart-box">
+
+          <h4>④ 잔차 히스토그램 (Histogram of Residuals)</h4>
+
+          <canvas id="resHistChart"></canvas>
+
+        </div>
+
+      </div>
+
+
+
+      <h4 style="margin-top:24px; margin-bottom:8px;">📋 관측 데이터별 적합치 및 잔차 상세표</h4>
+
+      <div class="table-responsive">
+
+        <table>
+
+          <thead>
+
+            <tr>
+
+              <th>Run (반복)</th>
+
+              <th>처리</th>
+
+              <th>실제 값 ($Y$)</th>
+
+              <th>모형 적합치 ($\hat{Y}$)</th>
+
+              <th>잔차 ($e = Y - \hat{Y}$)</th>
+
+              <th>표준화 잔차 ($d = e/S$)</th>
+
+              <th>상태 진단</th>
+
+            </tr>
+
+          </thead>
+
+          <tbody id="residualTableBody"></tbody>
+
+        </table>
+
+      </div>
+
+
+
+      <div class="diag-box">
+
+        <h4 style="color:#166534; margin-bottom:6px;">✅ 모형 타당성 진단 종합 평가</h4>
+
+        <ul style="padding-left: 20px; font-size: 0.88rem; line-height: 1.7; color: #14532d;">
+
+          <li><b>정규성 (Normality)</b>: 잔차가 기준 직선에 조밀하게 위치하는지 점검합니다.</li>
+
+          <li><b>등분산성 (Homoscedasticity)</b>: 적합치 영역 전체에 걸쳐 잔차 폭이 일정한지 점검합니다.</li>
+
+          <li><b>독립성 (Independence)</b>: 관측 순서에 따른 경향성이 없는지 점검합니다.</li>
+
+        </ul>
+
+      </div>
+
+
+
+      <div class="nav-footer">
+
+        <button class="btn btn-secondary" onclick="switchStep(7)">← 이전: 교호작용 그래프</button>
+
+        <button class="btn" onclick="switchStep(9)">다음: 결과분석 →</button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- 9단계: 결과분석 -->
+
+  <div class="step-content" id="step9">
+
+    <div class="card">
+
+      <div class="card-header"><div class="card-title">🎯 9단계: 종합 결과 분석 및 회귀 방정식</div></div>
+
+      <div class="grid-2">
+
+        <div class="chart-box">
+
+          <h4>효과 크기 파레토도 (Pareto Chart)</h4>
+
+          <canvas id="paretoChart"></canvas>
+
+        </div>
+
+        <div>
+
+          <h3 style="font-size:1.05rem; margin-bottom:12px;">📊 통계적 분석 결과 요약</h3>
+
+          <ul id="summaryList" style="padding-left: 20px; font-size: 0.9rem; line-height: 1.8;"></ul>
+
+          <div style="margin-top:12px;">
+
+            <strong>최종 회귀 예측식</strong> (5단계 선택 항목 반영): <br>
+
+            <code id="regressionFormula" style="background:#f1f5f9; padding:6px 10px; border-radius:4px; display:inline-block; margin-top:4px; font-weight:600; font-size:0.92rem;"></code>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="nav-footer">
+
+        <button class="btn btn-secondary" onclick="switchStep(8)">← 이전: 잔차분석</button>
+
+        <button class="btn btn-success" onclick="switchStep(10)">다음: 10단계 반응 최적화 (Response Optimizer) →</button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- 10단계: 반응 최적화 (Response Optimizer) -->
+
+  <div class="step-content" id="step10">
+
+    <div class="card">
+
+      <div class="card-header">
+
+        <div class="card-title">🚀 10단계: 반응 최적화 도구 (Response Optimizer)</div>
+
+        <button class="btn btn-success" onclick="runOptimizer()">⚡ 최적 공정 조건 탐색</button>
+
+      </div>
+
+
+
+      <div class="info-callout">
+
+        💡 9단계에서 수립된 회귀 방정식 기반으로 <strong>목표 반응치($Y$)</strong>를 설정하면 수치형 인자는 연속 범위 $[-1, +1]$ 내에서, 문자형 인자는 정해진 고/저수준에서 수치 탐색 알고리즘(Grid Optimization)을 수행하여 최적 조건을 도출합니다.
+
+      </div>
+
+
+
+      <!-- 최적화 목표 설정 영역 -->
+
+      <div class="opt-control-panel">
+
+        <h4 style="margin-bottom:10px; color:var(--text); font-size:0.98rem;">🎯 최적화 목표 설정 (Optimization Goal)</h4>
+
+        <div class="opt-grid-controls">
+
+          <div>
+
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">목표 유형 (Goal):</label>
+
+            <select id="optGoalSelect" class="input-opt" style="width:100%;" onchange="toggleOptTargetInput()">
+
+              <option value="target">목표값 맞추기 (Target)</option>
+
+              <option value="maximize">반응치 극대화 (Maximize Y)</option>
+
+              <option value="minimize">반응치 극소화 (Minimize Y)</option>
+
+            </select>
+
+          </div>
+
+          <div id="optTargetGroup">
+
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">목표 반응치 ($Y_{\text{target}}$):</label>
+
+            <input type="number" id="optTargetY" class="input-factor" style="width:100%; text-align:left;" value="75.0" step="any" onchange="runOptimizer()">
+
+          </div>
+
+          <div>
+
+            <label style="font-weight:700; font-size:0.85rem; display:block; margin-bottom:4px;">수치 탐색 정밀도 (Step Size):</label>
+
+            <select id="optStepSelect" class="input-opt" style="width:100%;" onchange="runOptimizer()">
+
+              <option value="0.05">정밀 탐색 (0.05 Step)</option>
+
+              <option value="0.01">초정밀 탐색 (0.01 Step)</option>
+
+              <option value="0.1">빠른 탐색 (0.10 Step)</option>
+
+            </select>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- 탐색 결과 출력 박스 -->
+
+      <div class="opt-card-result">
+
+        <h3>🏆 도출된 최적 공정 조건 및 예측 반응치</h3>
+
+        <div class="grid-2" style="margin-top:14px; align-items:center;">
+
+          <div>
+
+            <div style="font-size:0.92rem; margin-bottom:8px;">
+
+              <strong>최적 부호화 수준 (Coded Levels):</strong><br>
+
+              <span id="optCodedLevels" style="font-weight:700; color:var(--primary-dark); font-size:1.05rem;">x_A = 0.00, x_B = 1.00, x_C = 0.50</span>
+
+            </div>
+
+            <div style="font-size:0.92rem; margin-bottom:8px;">
+
+              <strong>최적 실제 공정 조건 (Actual Levels):</strong><br>
+
+              <span id="optActualLevels" style="font-weight:700; color:#065f46; font-size:1.05rem;">Temp = 170.0 °C, Gas = O2, Pre = 8.75 bar</span>
+
+            </div>
+
+          </div>
+
+          <div style="text-align:center; background:#ffffff; padding:16px; border-radius:10px; border:1px solid #a7f3d0;">
+
+            <div style="font-size:0.85rem; color:var(--text-muted); font-weight:600; margin-bottom:4px;">예측 반응치 ($\hat{Y}$)</div>
+
+            <div id="optPredY" style="font-size:1.8rem; font-weight:800; color:var(--primary);">75.00</div>
+
+            <div id="optDesirability" style="font-size:0.82rem; color:var(--text-muted); margin-top:4px;">만족도(Desirability) / 오차: d = 1.000 (오차: 0.00)</div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <!-- 대화형 시뮬레이터 (Interactive Slider Simulator) -->
+
+      <div class="card" style="border-color:#cbd5e1; background:#ffffff;">
+
+        <h4 style="margin-bottom:14px; font-size:1.02rem; color:var(--primary-dark);">🎛️ 실시간 공정 조건 조절 및 반응치 예측 시뮬레이터</h4>
+
+        <div class="grid-2">
+
+          <div>
+
+            <!-- 인자 A 슬라이더 -->
+
+            <div class="sim-slider-group">
+
+              <div class="sim-slider-label">
+
+                <span id="simLabelA">Temp (A):</span>
+
+                <span id="simValA" style="color:var(--primary); font-weight:700;">170.0 °C (x=0.00)</span>
+
+              </div>
+
+              <input type="range" id="simRangeA" class="sim-slider" min="-1" max="1" step="0.01" value="0" oninput="updateInteractivePrediction()">
+
+            </div>
+
+
+
+            <!-- 인자 B 슬라이더/선택 -->
+
+            <div class="sim-slider-group">
+
+              <div class="sim-slider-label">
+
+                <span id="simLabelB">Gas (B):</span>
+
+                <span id="simValB" style="color:var(--primary); font-weight:700;">O2 (x=+1.00)</span>
+
+              </div>
+
+              <input type="range" id="simRangeB" class="sim-slider" min="-1" max="1" step="2" value="1" oninput="updateInteractivePrediction()">
+
+            </div>
+
+
+
+            <!-- 인자 C 슬라이더 -->
+
+            <div class="sim-slider-group">
+
+              <div class="sim-slider-label">
+
+                <span id="simLabelC">Pre (C):</span>
+
+                <span id="simValC" style="color:var(--primary); font-weight:700;">7.5 bar (x=0.00)</span>
+
+              </div>
+
+              <input type="range" id="simRangeC" class="sim-slider" min="-1" max="1" step="0.01" value="0" oninput="updateInteractivePrediction()">
+
+            </div>
+
+          </div>
+
+
+
+          <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; background:#f8fafc; border-radius:10px; border:1px solid var(--border); padding:20px;">
+
+            <div style="font-size:0.9rem; font-weight:600; color:var(--text-muted);">현재 조절 상태의 모델 예측치 ($\hat{Y}$)</div>
+
+            <div id="simLivePredY" style="font-size:2.2rem; font-weight:800; color:var(--primary); margin:8px 0;">64.25</div>
+
+            <div id="simLiveDiff" style="font-size:0.85rem; color:var(--text-muted);">목표값과의 편차: 10.75</div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="nav-footer">
+
+        <button class="btn btn-secondary" onclick="switchStep(9)">← 이전: 결과분석</button>
+
+        <button class="btn" onclick="switchStep(1)">처음으로 (1단계) ↺</button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+<script>
+
+// ==========================================
+
+// 1. 상태 관리 (State Management)
+
+// ==========================================
+
+let replicateCount = 1;
+
+
+
+let factorInfo = {
+
+  A: { symbol: 'A', name: 'Temp', type: '수치형', lowVal: '160', highVal: '180', unit: '°C' },
+
+  B: { symbol: 'B', name: 'Gas', type: '문자형', lowVal: 'N2', highVal: 'O2', unit: '-' },
+
+  C: { symbol: 'C', name: 'Pre', type: '수치형', lowVal: '5', highVal: '10', unit: 'bar' }
+
+};
+
+
+
+const baseRunsData = [
+
+  { run: 1, label: '(1)', A: -1, B: -1, C: -1, yields: [60, 62, 59, 61] },
+
+  { run: 2, label: 'a',   A:  1, B: -1, C: -1, yields: [72, 70, 74, 71] },
+
+  { run: 3, label: 'b',   A: -1, B:  1, C: -1, yields: [54, 56, 53, 55] },
+
+  { run: 4, label: 'ab',  A:  1, B:  1, C: -1, yields: [68, 67, 69, 68] },
+
+  { run: 5, label: 'c',   A: -1, B: -1, C:  1, yields: [52, 54, 51, 53] },
+
+  { run: 6, label: 'ac',  A:  1, B: -1, C:  1, yields: [83, 85, 82, 84] },
+
+  { run: 7, label: 'bc',  A: -1, B:  1, C:  1, yields: [45, 47, 44, 46] },
+
+  { run: 8, label: 'abc', A:  1, B:  1, C:  1, yields: [80, 82, 79, 81] }
+
+];
+
+
+
+let factorsDef = [];
+
+function updateFactorsDef() {
+
+  const nameA = factorInfo.A.name || 'A';
+
+  const nameB = factorInfo.B.name || 'B';
+
+  const nameC = factorInfo.C.name || 'C';
+
+
+
+  factorsDef = [
+
+    { key: 'A', name: `${nameA} (A)`, shortName: nameA, type: '주효과', inModel: true },
+
+    { key: 'B', name: `${nameB} (B)`, shortName: nameB, type: '주효과', inModel: true },
+
+    { key: 'C', name: `${nameC} (C)`, shortName: nameC, type: '주효과', inModel: true },
+
+    { key: 'AB', name: `${nameA} × ${nameB} (AB)`, shortName: `${nameA}×${nameB}`, type: '2차 교호작용', inModel: true },
+
+    { key: 'AC', name: `${nameA} × ${nameC} (AC)`, shortName: `${nameA}×${nameC}`, type: '2차 교호작용', inModel: true },
+
+    { key: 'BC', name: `${nameB} × ${nameC} (BC)`, shortName: `${nameB}×${nameC}`, type: '2차 교호작용', inModel: true },
+
+    { key: 'ABC', name: `${nameA} × ${nameB} × ${nameC} (ABC)`, shortName: `${nameA}×${nameB}×${nameC}`, type: '3차 교호작용', inModel: true }
+
+  ];
+
+}
+
+
+
+let charts = {};
+
+let currentActiveStep = 1;
+
+let currentCalculationResults = null; // 최적화 모듈 연동용 글로벌 상태
+
+
+
+// ==========================================
+
+// 2. 통계 함수
+
+// ==========================================
+
+function probit(p) {
+
+  const a = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+
+  const b = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01];
+
+  const c = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+
+  const d = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00];
+
+  if (p <= 0) return -3.5;
+
+  if (p >= 1) return 3.5;
+
+  if (p < 0.02425) {
+
+    let q = Math.sqrt(-2 * Math.log(p));
+
+    return (((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+
+  } else if (p > 1 - 0.02425) {
+
+    let q = Math.sqrt(-2 * Math.log(1 - p));
+
+    return -(((((c[0]*q+c[1])*q+c[2])*q+c[3])*q+c[4])*q+c[5]) / ((((d[0]*q+d[1])*q+d[2])*q+d[3])*q+1);
+
+  } else {
+
+    let q = p - 0.5;
+
+    let r = q * q;
+
+    return (((((a[0]*r+a[1])*r+a[2])*r+a[3])*r+a[4])*r+a[5])*q / (((((b[0]*r+b[1])*r+b[2])*r+b[3])*r+b[4])*r+1);
+
+  }
+
+}
+
+
+
+function logGamma(z) {
+
+  const c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.138571095836526, 9.9843695780195716e-6, 1.5056327351493116e-7];
+
+  if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - logGamma(1 - z);
+
+  z -= 1;
+
+  let x = c[0];
+
+  for (let i = 1; i < 9; i++) x += c[i] / (z + i);
+
+  let t = z + 7.5;
+
+  return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x);
+
+}
+
+
+
+function betacf(a, b, x) {
+
+  let qab = a + b, qap = a + 1, qam = a - 1;
+
+  let c = 1, d = 1 - qab * x / qap;
+
+  if (Math.abs(d) < 1e-30) d = 1e-30;
+
+  d = 1 / d;
+
+  let h = d;
+
+  for (let m = 1; m <= 100; m++) {
+
+    let m2 = 2 * m;
+
+    let aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+
+    d = 1 + aa * d; if (Math.abs(d) < 1e-30) d = 1e-30;
+
+    c = 1 + aa / c; if (Math.abs(c) < 1e-30) c = 1e-30;
+
+    d = 1 / d; h *= d * c;
+
+    aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+
+    d = 1 + aa * d; if (Math.abs(d) < 1e-30) d = 1e-30;
+
+    c = 1 + aa / c; if (Math.abs(c) < 1e-30) c = 1e-30;
+
+    d = 1 / d;
+
+    let del = d * c;
+
+    h *= del;
+
+    if (Math.abs(del - 1) < 1e-7) break;
+
+  }
+
+  return h;
+
+}
+
+
+
+function betainc(x, a, b) {
+
+  if (x <= 0) return 0;
+
+  if (x >= 1) return 1;
+
+  let bt = Math.exp(logGamma(a + b) - logGamma(a) - logGamma(b) + a * Math.log(x) + b * Math.log(1 - x));
+
+  if (x < (a + 1) / (a + b + 2)) return bt * betacf(a, b, x) / a;
+
+  return 1 - bt * betacf(b, a, 1 - x) / b;
+
+}
+
+
+
+function calcFPValue(f, df1, df2) {
+
+  if (f <= 0 || isNaN(f) || df1 <= 0 || df2 <= 0) return 1.0;
+
+  let x = (df1 * f) / (df1 * f + df2);
+
+  return 1.0 - betainc(x, df1 / 2, df2 / 2);
+
+}
+
+
+
+// ==========================================
+
+// 3. 네비게이션 및 테이블 동적 렌더링
+
+// ==========================================
+
+function switchStep(stepNum) {
+
+  currentActiveStep = stepNum;
+
+  document.querySelectorAll('.step-nav .step-btn').forEach((btn, idx) => {
+
+    btn.classList.toggle('active', idx + 1 === stepNum);
+
+  });
+
+  document.querySelectorAll('.step-content').forEach((content, idx) => {
+
+    content.classList.toggle('active', idx + 1 === stepNum);
+
+  });
+
+
+
+  if ([6, 7, 8, 9].includes(stepNum)) {
+
+    setTimeout(() => {
+
+      Object.keys(charts).forEach(k => charts[k] && charts[k].resize());
+
+    }, 50);
+
+  }
+
+
+
+  if (stepNum === 10) {
+
+    runOptimizer();
+
+  }
+
+}
+
+
+
+function updateReplicatesFromInput() {
+
+  const sel = document.getElementById('replicateCountSelect');
+
+  replicateCount = parseInt(sel.value, 10) || 1;
+
+  renderDesignAndInputTables();
+
+  calculateDOE();
+
+}
+
+
+
+function initFactorConfigTable() {
+
+  const tbody = document.getElementById('factorConfigTableBody');
+
+  tbody.innerHTML = '';
+
+
+
+  ['A', 'B', 'C'].forEach(sym => {
+
+    const f = factorInfo[sym];
+
+    const tr = document.createElement('tr');
+
+    tr.innerHTML = `
+
+      <td><strong>${sym}</strong></td>
+
+      <td><input type="text" class="input-factor" id="fact_name_${sym}" value="${f.name}" onchange="updateFactorInfo()"></td>
+
+      <td>
+
+        <select class="input-factor" id="fact_type_${sym}" onchange="updateFactorInfo()">
+
+          <option value="수치형" ${f.type === '수치형' ? 'selected' : ''}>수치형</option>
+
+          <option value="문자형" ${f.type === '문자형' ? 'selected' : ''}>문자형</option>
+
+        </select>
+
+      </td>
+
+      <td><input type="text" class="input-factor" id="fact_low_${sym}" value="${f.lowVal}" onchange="updateFactorInfo()"></td>
+
+      <td><input type="text" class="input-factor" id="fact_high_${sym}" value="${f.highVal}" onchange="updateFactorInfo()"></td>
+
+      <td><input type="text" class="input-factor" id="fact_unit_${sym}" value="${f.unit}" onchange="updateFactorInfo()"></td>
+
+    `;
+
+    tbody.appendChild(tr);
+
+  });
+
+}
+
+
+
+function updateFactorInfo() {
+
+  ['A', 'B', 'C'].forEach(sym => {
+
+    factorInfo[sym].name = document.getElementById(`fact_name_${sym}`).value || sym;
+
+    factorInfo[sym].type = document.getElementById(`fact_type_${sym}`).value;
+
+    factorInfo[sym].lowVal = document.getElementById(`fact_low_${sym}`).value;
+
+    factorInfo[sym].highVal = document.getElementById(`fact_high_${sym}`).value;
+
+    factorInfo[sym].unit = document.getElementById(`fact_unit_${sym}`).value;
+
+  });
+
+
+
+  updateFactorsDef();
+
+  renderDesignAndInputTables();
+
+  calculateDOE();
+
+}
+
+
+
+function applyFactorSettings() {
+
+  updateFactorInfo();
+
+  switchStep(2);
+
+}
+
+
+
+function renderDesignAndInputTables() {
+
+  const nameA = factorInfo.A.name;
+
+  const nameB = factorInfo.B.name;
+
+  const nameC = factorInfo.C.name;
+
+
+
+  document.getElementById('headerSubtitle').innerText = 
+
+    `인자: ${nameA}(${factorInfo.A.lowVal}, ${factorInfo.A.highVal} ${factorInfo.A.unit}) | ${nameB}(${factorInfo.B.lowVal}, ${factorInfo.B.highVal}) | ${nameC}(${factorInfo.C.lowVal}, ${factorInfo.C.highVal} ${factorInfo.C.unit}) | 반복수: ${replicateCount}회 (총 ${8 * replicateCount} runs)`;
+
+
+
+  document.getElementById('designTableHeader').innerHTML = 
+
+    `<th>표준순서 (Run)</th><th>처리조합</th><th>A: ${nameA}</th><th>B: ${nameB}</th><th>C: ${nameC}</th><th>A 부호</th><th>B 부호</th><th>C 부호</th>`;
+
+
+
+  const dBody = document.getElementById('designTableBody');
+
+  dBody.innerHTML = '';
+
+  baseRunsData.forEach(r => {
+
+    const tr = document.createElement('tr');
+
+    tr.innerHTML = `
+
+      <td><strong>${r.run}</strong></td>
+
+      <td><code>${r.label}</code></td>
+
+      <td>${r.A === -1 ? factorInfo.A.lowVal : factorInfo.A.highVal}</td>
+
+      <td>${r.B === -1 ? factorInfo.B.lowVal : factorInfo.B.highVal}</td>
+
+      <td>${r.C === -1 ? factorInfo.C.lowVal : factorInfo.C.highVal}</td>
+
+      <td>${r.A > 0 ? '+1' : '-1'}</td>
+
+      <td>${r.B > 0 ? '+1' : '-1'}</td>
+
+      <td>${r.C > 0 ? '+1' : '-1'}</td>
+
+    `;
+
+    dBody.appendChild(tr);
+
+  });
+
+
+
+  let yHeaderHtml = '';
+
+  for (let rep = 1; rep <= replicateCount; rep++) {
+
+    yHeaderHtml += `<th>반응치 Y${replicateCount > 1 ? rep : ''}</th>`;
+
+  }
+
+  if (replicateCount > 1) {
+
+    yHeaderHtml += `<th>평균 $\\bar{Y}$</th>`;
+
+  }
+
+
+
+  document.getElementById('inputTableHeader').innerHTML = 
+
+    `<th>Run</th><th>처리</th><th>${nameA}</th><th>${nameB}</th><th>${nameC}</th><th>A</th><th>B</th><th>C</th>` + yHeaderHtml;
+
+
+
+  const existingYields = baseRunsData.map((b, idx) => {
+
+    const rYields = [];
+
+    for (let rep = 1; rep <= replicateCount; rep++) {
+
+      const el = document.getElementById(`yield_${idx}_${rep}`);
+
+      if (el) {
+
+        rYields.push(parseFloat(el.value) || b.yields[rep - 1] || b.yields[0]);
+
+      } else {
+
+        rYields.push(b.yields[rep - 1] || b.yields[0]);
+
+      }
+
+    }
+
+    return rYields;
+
+  });
+
+
+
+  const iBody = document.getElementById('inputTableBody');
+
+  iBody.innerHTML = '';
+
+  baseRunsData.forEach((r, idx) => {
+
+    const tr = document.createElement('tr');
+
+    let inputTdHtml = '';
+
+    for (let rep = 1; rep <= replicateCount; rep++) {
+
+      const val = existingYields[idx][rep - 1];
+
+      inputTdHtml += `<td><input type="number" class="input-yield" id="yield_${idx}_${rep}" value="${val}" step="any" onchange="calculateDOE()"></td>`;
+
+    }
+
+    if (replicateCount > 1) {
+
+      inputTdHtml += `<td id="mean_y_${idx}" style="font-weight:700; color:var(--primary-dark);">-</td>`;
+
+    }
+
+
+
+    tr.innerHTML = `
+
+      <td><strong>${r.run}</strong></td>
+
+      <td><code>${r.label}</code></td>
+
+      <td>${r.A === -1 ? factorInfo.A.lowVal : factorInfo.A.highVal}</td>
+
+      <td>${r.B === -1 ? factorInfo.B.lowVal : factorInfo.B.highVal}</td>
+
+      <td>${r.C === -1 ? factorInfo.C.lowVal : factorInfo.C.highVal}</td>
+
+      <td>${r.A > 0 ? '+' : '-'}</td>
+
+      <td>${r.B > 0 ? '+' : '-'}</td>
+
+      <td>${r.C > 0 ? '+' : '-'}</td>
+
+      ${inputTdHtml}
+
+    `;
+
+    iBody.appendChild(tr);
+
+  });
+
+}
+
+
+
+function toggleModelFactor(index) {
+
+  factorsDef[index].inModel = document.getElementById(`chk_${index}`).checked;
+
+  calculateDOE();
+
+}
+
+
+
+function setPreset(preset) {
+
+  if (preset === 'recommended') {
+
+    factorsDef.forEach(f => { f.inModel = ['A', 'B', 'C', 'AC'].includes(f.key); });
+
+  } else if (preset === 'mainOnly') {
+
+    factorsDef.forEach(f => { f.inModel = ['A', 'B', 'C'].includes(f.key); });
+
+  } else if (preset === 'all') {
+
+    factorsDef.forEach(f => { f.inModel = true; });
+
+  }
+
+  calculateDOE();
+
+}
+
+
+
+// ==========================================
+
+// 4. 연산 및 동적 결과 업데이트 루틴
+
+// ==========================================
+
+function calculateDOE() {
+
+  const rCount = replicateCount;
+
+  const runs = baseRunsData.map((base, idx) => {
+
+    const yList = [];
+
+    for (let rep = 1; rep <= rCount; rep++) {
+
+      const el = document.getElementById(`yield_${idx}_${rep}`);
+
+      const val = el ? (parseFloat(el.value) || 0) : base.yields[rep - 1];
+
+      yList.push(val);
+
+    }
+
+    const sumY = yList.reduce((a, b) => a + b, 0);
+
+    const meanY = sumY / rCount;
+
+
+
+    const meanTd = document.getElementById(`mean_y_${idx}`);
+
+    if (meanTd) meanTd.innerText = meanY.toFixed(2);
+
+
+
+    return {
+
+      ...base,
+
+      yList,
+
+      sumY,
+
+      yMean: meanY,
+
+      AB: base.A * base.B,
+
+      AC: base.A * base.C,
+
+      BC: base.B * base.C,
+
+      ABC: base.A * base.B * base.C
+
+    };
+
+  });
+
+
+
+  const totalN = 8 * rCount;
+
+  let grandSum = 0;
+
+  let totalRawSS = 0;
+
+
+
+  runs.forEach(r => {
+
+    grandSum += r.sumY;
+
+    r.yList.forEach(yVal => { totalRawSS += yVal * yVal; });
+
+  });
+
+
+
+  const grandMean = grandSum / totalN;
+
+  const totalSS = totalRawSS - (grandSum * grandSum) / totalN;
+
+
+
+  let pureErrorSS = 0;
+
+  runs.forEach(r => {
+
+    r.yList.forEach(yVal => {
+
+      pureErrorSS += (yVal - r.yMean) ** 2;
+
+    });
+
+  });
+
+  const pureErrorDF = 8 * (rCount - 1);
+
+
+
+  let modelFactorSSSum = 0;
+
+  const results = factorsDef.map((eff, idx) => {
+
+    let contrast = 0;
+
+    runs.forEach(r => {
+
+      contrast += r[eff.key] * r.sumY;
+
+    });
+
+
+
+    const effect = contrast / (4 * rCount);
+
+    const coef = effect / 2;
+
+    const ss = (contrast ** 2) / (8 * rCount);
+
+
+
+    modelFactorSSSum += ss;
+
+
+
+    const lowRuns = runs.filter(r => r[eff.key] === -1);
+
+    const highRuns = runs.filter(r => r[eff.key] === 1);
+
+
+
+    const lowMean = lowRuns.reduce((sum, r) => sum + r.sumY, 0) / (4 * rCount);
+
+    const highMean = highRuns.reduce((sum, r) => sum + r.sumY, 0) / (4 * rCount);
+
+
+
+    return { ...eff, idx, contrast, effect, coef, ss, df: 1, ms: ss, lowMean, highMean };
+
+  });
+
+
+
+  results.forEach(r => { r.contribution = (r.ss / (totalSS || 1)) * 100; });
+
+
+
+  // 3단계 주효과 테이블
+
+  const mBody = document.getElementById('mainEffectsTableBody');
+
+  mBody.innerHTML = '';
+
+  results.slice(0, 3).forEach(r => {
+
+    const tr = document.createElement('tr');
+
+    tr.innerHTML = `
+
+      <td><strong>${r.name}</strong></td>
+
+      <td>${r.lowMean.toFixed(2)}</td>
+
+      <td>${r.highMean.toFixed(2)}</td>
+
+      <td>${r.contrast.toFixed(1)}</td>
+
+      <td><strong style="color:${r.effect > 0 ? '#2563eb' : '#dc2626'}">${r.effect > 0 ? '+' : ''}${r.effect.toFixed(2)}</strong></td>
+
+      <td><strong>${r.coef > 0 ? '+' : ''}${r.coef.toFixed(2)}</strong></td>
+
+      <td>${r.ss.toFixed(2)}</td>
+
+      <td><strong>${r.contribution.toFixed(2)}%</strong></td>
+
+    `;
+
+    mBody.appendChild(tr);
+
+  });
+
+
+
+  // 4단계 교호효과 테이블
+
+  const interBody = document.getElementById('interEffectsTableBody');
+
+  interBody.innerHTML = '';
+
+  results.slice(3).forEach(r => {
+
+    const tr = document.createElement('tr');
+
+    tr.innerHTML = `
+
+      <td><strong>${r.name}</strong></td>
+
+      <td><code>${r.key} = (${r.key.split('').join(' × ')})</code></td>
+
+      <td>${r.contrast.toFixed(1)}</td>
+
+      <td><strong style="color:${r.effect > 0 ? '#2563eb' : '#dc2626'}">${r.effect > 0 ? '+' : ''}${r.effect.toFixed(2)}</strong></td>
+
+      <td><strong>${r.coef > 0 ? '+' : ''}${r.coef.toFixed(2)}</strong></td>
+
+      <td>${r.ss.toFixed(2)}</td>
+
+      <td><strong>${r.contribution.toFixed(2)}%</strong></td>
+
+    `;
+
+    interBody.appendChild(tr);
+
+  });
+
+
+
+  // 5단계 ANOVA 오차항 계산
+
+  let pooledErrorSS = 0;
+
+  let pooledErrorDF = 0;
+
+  results.forEach(r => {
+
+    if (!r.inModel) {
+
+      pooledErrorSS += r.ss;
+
+      pooledErrorDF += r.df;
+
+    }
+
+  });
+
+
+
+  const totalErrorSS = pooledErrorSS + pureErrorSS;
+
+  const totalErrorDF = pooledErrorDF + pureErrorDF;
+
+  const errorMS = totalErrorDF > 0 ? totalErrorSS / totalErrorDF : 0;
+
+  const s = Math.sqrt(errorMS);
+
+
+
+  results.forEach(r => {
+
+    if (r.inModel && totalErrorDF > 0 && errorMS > 0) {
+
+      r.fVal = r.ms / errorMS;
+
+      r.pVal = calcFPValue(r.fVal, r.df, totalErrorDF);
+
+    } else {
+
+      r.fVal = null;
+
+      r.pVal = null;
+
+    }
+
+  });
+
+
+
+  const allObservations = [];
+
+  let obsIndex = 1;
+
+  runs.forEach(r => {
+
+    let yHat = grandMean;
+
+    results.forEach(eff => {
+
+      if (eff.inModel) {
+
+        yHat += eff.coef * r[eff.key];
+
+      }
+
+    });
+
+    r.yHat = yHat;
+
+
+
+    r.yList.forEach((yVal, repIdx) => {
+
+      const resid = yVal - yHat;
+
+      const stdResid = s > 0 ? resid / s : 0;
+
+      allObservations.push({
+
+        obsId: obsIndex++,
+
+        run: r.run,
+
+        label: r.label + (rCount > 1 ? ` (#${repIdx + 1})` : ''),
+
+        y: yVal,
+
+        yHat: yHat,
+
+        resid: resid,
+
+        stdResid: stdResid
+
+      });
+
+    });
+
+  });
+
+
+
+  // 글로벌 상태에 연산 결과 보관 (10단계 활용)
+
+  currentCalculationResults = {
+
+    grandMean,
+
+    results,
+
+    runs,
+
+    errorMS,
+
+    s
+
+  };
+
+
+
+  renderAnovaTable(results, grandMean, totalSS, totalN, totalErrorSS, totalErrorDF, errorMS);
+
+  renderResidualTable(allObservations);
+
+  renderCharts(runs, results, s, allObservations);
+
+  renderAnalysis(results, grandMean, runs, errorMS);
+
+
+
+  if (currentActiveStep === 10) {
+
+    runOptimizer();
+
+  }
+
+}
+
+
+
+// 5단계 분산분석표 렌더링
+
+function renderAnovaTable(results, grandMean, totalSS, totalN, errorSS, errorDF, errorMS) {
+
+  const tbody = document.getElementById('anovaTableBody');
+
+  tbody.innerHTML = '';
+
+
+
+  const trIntercept = document.createElement('tr');
+
+  trIntercept.style.backgroundColor = '#f8fafc';
+
+  trIntercept.innerHTML = `
+
+    <td><input type="checkbox" checked disabled></td>
+
+    <td style="text-align:left; font-weight:700;">절편 (Intercept, β₀)</td>
+
+    <td>-</td>
+
+    <td style="background:#eff6ff; font-weight:700; color:#1d4ed8;"><strong>${grandMean > 0 ? '+' : ''}${grandMean.toFixed(2)}</strong></td>
+
+    <td>-</td>
+
+    <td>-</td>
+
+    <td>-</td>
+
+    <td>-</td>
+
+    <td>-</td>
+
+    <td><span class="badge-sig" style="background:#e0e7ff; color:#3730a3;">총 평균</span></td>
+
+  `;
+
+  tbody.appendChild(trIntercept);
+
+
+
+  results.forEach((r, idx) => {
+
+    const tr = document.createElement('tr');
+
+    if (!r.inModel) tr.style.backgroundColor = '#fffbeb';
+
+
+
+    let fDisplay = '-';
+
+    let pDisplay = '-';
+
+    let sigDisplay = '<span class="badge-pooled">오차항 풀링</span>';
+
+
+
+    if (r.inModel) {
+
+      if (errorDF > 0) {
+
+        fDisplay = r.fVal.toFixed(2);
+
+        pDisplay = r.pVal < 0.0001 ? '< 0.0001' : r.pVal.toFixed(4);
+
+        if (r.pVal < 0.001) sigDisplay = '<span class="badge-sig" style="background:#fee2e2; color:#991b1b;">*** 유의 (p < 0.001)</span>';
+
+        else if (r.pVal < 0.01) sigDisplay = '<span class="badge-sig" style="background:#fed7aa; color:#9a3412;">** 유의 (p < 0.01)</span>';
+
+        else if (r.pVal < 0.05) sigDisplay = '<span class="badge-sig" style="background:#fef3c7; color:#854d0e;">* 유의 (p < 0.05)</span>';
+
+        else sigDisplay = '<span class="badge-ns">비유의 (n.s.)</span>';
+
+      } else {
+
+        fDisplay = 'N/A';
+
+        pDisplay = 'N/A';
+
+        sigDisplay = '<span class="badge-ns">잔차 0</span>';
+
+      }
+
+    }
+
+
+
+    const coefDisplay = r.coef > 0 ? `+${r.coef.toFixed(2)}` : r.coef.toFixed(2);
+
+
+
+    tr.innerHTML = `
+
+      <td><input type="checkbox" id="chk_${idx}" ${r.inModel ? 'checked' : ''} onchange="toggleModelFactor(${idx})"></td>
+
+      <td style="text-align:left; font-weight:600;">${r.name}</td>
+
+      <td>${r.df}</td>
+
+      <td style="background:#f0f9ff; font-weight:700; color:#2563eb;"><strong>${coefDisplay}</strong></td>
+
+      <td>${r.ss.toFixed(2)}</td>
+
+      <td>${r.ms.toFixed(2)}</td>
+
+      <td><strong>${fDisplay}</strong></td>
+
+      <td><strong>${pDisplay}</strong></td>
+
+      <td>${r.contribution.toFixed(2)}%</td>
+
+      <td>${sigDisplay}</td>
+
+    `;
+
+    tbody.appendChild(tr);
+
+  });
+
+
+
+  const totalDF = totalN - 1;
+
+  document.getElementById('errorDF').innerText = errorDF;
+
+  document.getElementById('errorSS').innerText = errorSS.toFixed(2);
+
+  document.getElementById('errorMS').innerText = errorDF > 0 ? errorMS.toFixed(2) : '-';
+
+  document.getElementById('errorContrib').innerText = ((errorSS / (totalSS || 1)) * 100).toFixed(2) + '%';
+
+  document.getElementById('totalDF').innerText = totalDF;
+
+  document.getElementById('totalSS').innerText = totalSS.toFixed(2);
+
+  document.getElementById('totalMS').innerText = totalDF > 0 ? (totalSS / totalDF).toFixed(2) : '-';
+
+
+
+  const modelSS = totalSS - errorSS;
+
+  const r2 = (modelSS / (totalSS || 1)) * 100;
+
+  const s = Math.sqrt(errorMS);
+
+  let r2Adj = errorDF > 0 && totalSS > 0 ? (1 - (errorMS / (totalSS / totalDF))) * 100 : 0;
+
+
+
+  document.getElementById('valBeta0').innerText = grandMean.toFixed(2);
+
+  document.getElementById('valS').innerText = errorDF > 0 ? s.toFixed(3) : '0.000';
+
+  document.getElementById('valR2').innerText = `${r2.toFixed(2)}%`;
+
+  document.getElementById('valR2Adj').innerText = errorDF > 0 ? `${r2Adj.toFixed(2)}%` : 'N/A';
+
+  document.getElementById('valN').innerText = totalN;
+
+  document.getElementById('valFCrit').innerText = errorDF > 0 ? '10.13' : 'N/A';
+
+}
+
+
+
+function renderResidualTable(allObservations) {
+
+  const tbody = document.getElementById('residualTableBody');
+
+  tbody.innerHTML = '';
+
+  allObservations.forEach(obs => {
+
+    const tr = document.createElement('tr');
+
+    tr.innerHTML = `
+
+      <td><strong>Run ${obs.run}</strong></td>
+
+      <td><code>${obs.label}</code></td>
+
+      <td>${obs.y.toFixed(1)}</td>
+
+      <td>${obs.yHat.toFixed(2)}</td>
+
+      <td style="font-weight:700; color:${obs.resid >= 0 ? '#2563eb' : '#dc2626'}">${obs.resid >= 0 ? '+' : ''}${obs.resid.toFixed(2)}</td>
+
+      <td>${obs.stdResid.toFixed(2)}</td>
+
+      <td><span class="badge-sig" style="background:#ecfdf5; color:#065f46;">정상 (양호)</span></td>
+
+    `;
+
+    tbody.appendChild(tr);
+
+  });
+
+}
+
+
+
+// ==========================================
+
+// 5. 차트 렌더링 루틴
+
+// ==========================================
+
+function renderCharts(runs, results, s, allObservations) {
+
+  Object.keys(charts).forEach(k => charts[k] && charts[k].destroy());
+
+
+
+  const nameA = factorInfo.A.name;
+
+  const nameB = factorInfo.B.name;
+
+  const nameC = factorInfo.C.name;
+
+  const rCount = replicateCount;
+
+
+
+  document.getElementById('titleMainA').innerText = `주효과: ${nameA} (A)`;
+
+  document.getElementById('titleMainB').innerText = `주효과: ${nameB} (B)`;
+
+  document.getElementById('titleMainC').innerText = `주효과: ${nameC} (C)`;
+
+
+
+  document.getElementById('titleInterAB').innerText = `교호작용: ${nameA} × ${nameB} (AB)`;
+
+  document.getElementById('titleInterAC').innerText = `교호작용: ${nameA} × ${nameC} (AC)`;
+
+  document.getElementById('titleInterBC').innerText = `교호작용: ${nameB} × ${nameC} (BC)`;
+
+
+
+  function createMainChart(canvasId, factorKey, name, lowLabel, highLabel) {
+
+    const lowRuns = runs.filter(r => r[factorKey] === -1);
+
+    const highRuns = runs.filter(r => r[factorKey] === 1);
+
+    const lowMean = lowRuns.reduce((sum, r) => sum + r.sumY, 0) / (4 * rCount);
+
+    const highMean = highRuns.reduce((sum, r) => sum + r.sumY, 0) / (4 * rCount);
+
+
+
+    const ctx = document.getElementById(canvasId).getContext('2d');
+
+    charts[canvasId] = new Chart(ctx, {
+
+      type: 'line',
+
+      data: {
+
+        labels: [`-1 (${lowLabel})`, `+1 (${highLabel})`],
+
+        datasets: [{
+
+          label: `${name} 평균`,
+
+          data: [lowMean, highMean],
+
+          borderColor: '#2563eb',
+
+          backgroundColor: '#2563eb',
+
+          pointRadius: 6,
+
+          tension: 0
+
+        }]
+
+      },
+
+      options: {
+
+        responsive: true,
+
+        plugins: { legend: { display: false } },
+
+        scales: { y: { title: { display: true, text: '평균 반응치 (Y)' } } }
+
+      }
+
+    });
+
+  }
+
+
+
+  createMainChart('mainAChart', 'A', nameA, factorInfo.A.lowVal, factorInfo.A.highVal);
+
+  createMainChart('mainBChart', 'B', nameB, factorInfo.B.lowVal, factorInfo.B.highVal);
+
+  createMainChart('mainCChart', 'C', nameC, factorInfo.C.lowVal, factorInfo.C.highVal);
+
+
+
+  function createInterChart(canvasId, f1, f2, f1Name, f2Name, f1Low, f1High, f2Low, f2High) {
+
+    const getSubMean = (val1, val2) => {
+
+      const filtered = runs.filter(r => r[f1] === val1 && r[f2] === val2);
+
+      return filtered.reduce((sum, r) => sum + r.sumY, 0) / (filtered.length * rCount);
+
+    };
+
+
+
+    const d1 = getSubMean(-1, -1);
+
+    const d2 = getSubMean(1, -1);
+
+    const d3 = getSubMean(-1, 1);
+
+    const d4 = getSubMean(1, 1);
+
+
+
+    const ctx = document.getElementById(canvasId).getContext('2d');
+
+    charts[canvasId] = new Chart(ctx, {
+
+      type: 'line',
+
+      data: {
+
+        labels: [`${f1Name} (-1, ${f1Low})`, `${f1Name} (+1, ${f1High})`],
+
+        datasets: [
+
+          {
+
+            label: `${f2Name} (-1, ${f2Low})`,
+
+            data: [d1, d2],
+
+            borderColor: '#2563eb',
+
+            backgroundColor: '#2563eb',
+
+            pointRadius: 5,
+
+            tension: 0
+
+          },
+
+          {
+
+            label: `${f2Name} (+1, ${f2High})`,
+
+            data: [d3, d4],
+
+            borderColor: '#dc2626',
+
+            backgroundColor: '#dc2626',
+
+            pointRadius: 5,
+
+            borderDash: [5, 5],
+
+            tension: 0
+
+          }
+
+        ]
+
+      },
+
+      options: {
+
+        responsive: true,
+
+        scales: { y: { title: { display: true, text: '평균 반응치 (Y)' } } }
+
+      }
+
+    });
+
+  }
+
+
+
+  createInterChart('interABChart', 'A', 'B', nameA, nameB, factorInfo.A.lowVal, factorInfo.A.highVal, factorInfo.B.lowVal, factorInfo.B.highVal);
+
+  createInterChart('interACChart', 'A', 'C', nameA, nameC, factorInfo.A.lowVal, factorInfo.A.highVal, factorInfo.C.lowVal, factorInfo.C.highVal);
+
+  createInterChart('interBCChart', 'B', 'C', nameB, nameC, factorInfo.B.lowVal, factorInfo.B.highVal, factorInfo.C.lowVal, factorInfo.C.highVal);
+
+
+
+  const sortedObs = [...allObservations].sort((a, b) => a.resid - b.resid);
+
+  const totalN = sortedObs.length;
+
+  const normPoints = sortedObs.map((obs, i) => {
+
+    const p = (i + 1 - 0.375) / (totalN + 0.25);
+
+    return { x: obs.resid, y: probit(p) };
+
+  });
+
+
+
+  const normCtx = document.getElementById('normProbChart').getContext('2d');
+
+  charts['normProbChart'] = new Chart(normCtx, {
+
+    type: 'scatter',
+
+    data: {
+
+      datasets: [
+
+        { label: '잔차 데이터', data: normPoints, backgroundColor: '#2563eb', pointRadius: 5 },
+
+        {
+
+          label: '기준선',
+
+          type: 'line',
+
+          data: [{ x: -3 * (s || 1), y: -3 }, { x: 3 * (s || 1), y: 3 }],
+
+          borderColor: '#dc2626',
+
+          borderDash: [5, 5],
+
+          pointRadius: 0,
+
+          fill: false
+
+        }
+
+      ]
+
+    },
+
+    options: {
+
+      responsive: true,
+
+      plugins: { legend: { display: false } },
+
+      scales: {
+
+        x: { title: { display: true, text: '잔차 (Residual)' } },
+
+        y: { title: { display: true, text: '기대 정규 점수 (Z-Score)' } }
+
+      }
+
+    }
+
+  });
+
+
+
+  const fitPoints = allObservations.map(obs => ({ x: obs.yHat, y: obs.resid }));
+
+  const minFit = Math.min(...allObservations.map(obs => obs.yHat)) - 5;
+
+  const maxFit = Math.max(...allObservations.map(obs => obs.yHat)) + 5;
+
+  const fitCtx = document.getElementById('resVsFitChart').getContext('2d');
+
+  charts['resVsFitChart'] = new Chart(fitCtx, {
+
+    type: 'scatter',
+
+    data: {
+
+      datasets: [
+
+        { label: '잔차', data: fitPoints, backgroundColor: '#2563eb', pointRadius: 5 },
+
+        {
+
+          label: '기준선 (0)',
+
+          type: 'line',
+
+          data: [{ x: minFit, y: 0 }, { x: maxFit, y: 0 }],
+
+          borderColor: '#94a3b8',
+
+          borderDash: [4, 4],
+
+          pointRadius: 0,
+
+          fill: false
+
+        }
+
+      ]
+
+    },
+
+    options: {
+
+      responsive: true,
+
+      plugins: { legend: { display: false } },
+
+      scales: {
+
+        x: { title: { display: true, text: '적합치 (Fitted Value)' } },
+
+        y: { title: { display: true, text: '잔차 (Residual)' } }
+
+      }
+
+    }
+
+  });
+
+
+
+  const orderCtx = document.getElementById('resVsOrderChart').getContext('2d');
+
+  charts['resVsOrderChart'] = new Chart(orderCtx, {
+
+    type: 'line',
+
+    data: {
+
+      labels: allObservations.map(obs => `#${obs.obsId}`),
+
+      datasets: [
+
+        { label: '잔차 추이', data: allObservations.map(obs => obs.resid), borderColor: '#2563eb', backgroundColor: '#2563eb', pointRadius: 4, fill: false, tension: 0 }
+
+      ]
+
+    },
+
+    options: {
+
+      responsive: true,
+
+      plugins: { legend: { display: false } },
+
+      scales: {
+
+        x: { title: { display: true, text: '관측 순서 (Observation Order)' } },
+
+        y: { title: { display: true, text: '잔차 (Residual)' } }
+
+      }
+
+    }
+
+  });
+
+
+
+  const bins = { '-1.0': 0, '-0.5': 0, '0.0': 0, '+0.5': 0, '+1.0': 0 };
+
+  allObservations.forEach(obs => {
+
+    const val = obs.resid.toFixed(1);
+
+    if (val <= -0.75) bins['-1.0']++;
+
+    else if (val <= -0.25) bins['-0.5']++;
+
+    else if (val <= 0.25) bins['0.0']++;
+
+    else if (val <= 0.75) bins['+0.5']++;
+
+    else bins['+1.0']++;
+
+  });
+
+
+
+  const histCtx = document.getElementById('resHistChart').getContext('2d');
+
+  charts['resHistChart'] = new Chart(histCtx, {
+
+    type: 'bar',
+
+    data: {
+
+      labels: ['-1.0', '-0.5', '0.0', '+0.5', '+1.0'],
+
+      datasets: [{ label: '빈도', data: [bins['-1.0'], bins['-0.5'], bins['0.0'], bins['+0.5'], bins['+1.0']], backgroundColor: '#3b82f6' }]
+
+    },
+
+    options: {
+
+      responsive: true,
+
+      plugins: { legend: { display: false } },
+
+      scales: {
+
+        x: { title: { display: true, text: '잔차 구간' } },
+
+        y: { title: { display: true, text: '빈도' }, ticks: { stepSize: 1 } }
+
+      }
+
+    }
+
+  });
+
+
+
+  const sorted = [...results].sort((a, b) => Math.abs(b.effect) - Math.abs(a.effect));
+
+  const pCtx = document.getElementById('paretoChart').getContext('2d');
+
+  charts['paretoChart'] = new Chart(pCtx, {
+
+    type: 'bar',
+
+    data: {
+
+      labels: sorted.map(s => s.shortName),
+
+      datasets: [{
+
+        label: '|Effect| 효과 크기',
+
+        data: sorted.map(s => Math.abs(s.effect)),
+
+        backgroundColor: sorted.map(s => s.pVal !== null && s.pVal < 0.05 ? '#2563eb' : '#94a3b8')
+
+      }]
+
+    },
+
+    options: {
+
+      indexAxis: 'y',
+
+      responsive: true,
+
+      plugins: { legend: { display: false } },
+
+      scales: { x: { title: { display: true, text: '|Effect|' } } }
+
+    }
+
+  });
+
+}
+
+
+
+// 9단계 결과분석 및 회귀식 생성 함수
+
+function renderAnalysis(results, grandMean, runs, errorMS) {
+
+  const b0 = grandMean.toFixed(2);
+
+  const selectedTerms = results.filter(r => r.inModel);
+
+
+
+  let formula = `Ŷ = ${b0}`;
+
+  selectedTerms.forEach(t => {
+
+    formula += ` ${t.coef >= 0 ? '+' : '-'} ${Math.abs(t.coef).toFixed(2)}·(${t.shortName})`;
+
+  });
+
+  document.getElementById('regressionFormula').innerText = formula;
+
+
+
+  const summaryList = document.getElementById('summaryList');
+
+  summaryList.innerHTML = '';
+
+  const sortedByContrib = [...results].sort((a, b) => b.contribution - a.contribution);
+
+
+
+  sortedByContrib.forEach(item => {
+
+    if (item.contribution > 1) {
+
+      const li = document.createElement('li');
+
+      const pText = item.pVal !== null ? (item.pVal < 0.0001 ? 'P<0.0001' : `P=${item.pVal.toFixed(4)}`) : '풀링됨';
+
+      li.innerHTML = `<strong>${item.name}</strong>: 기여율 <strong>${item.contribution.toFixed(1)}%</strong> (${pText}, Effect=${item.effect.toFixed(2)}, β=${item.coef.toFixed(2)})`;
+
+      summaryList.appendChild(li);
+
+    }
+
+  });
+
+}
+
+
+
+// ==========================================
+
+// 6. 10단계 반응 최적화 (Response Optimizer) 연산 엔진
+
+// ==========================================
+
+
+
+function toggleOptTargetInput() {
+
+  const goal = document.getElementById('optGoalSelect').value;
+
+  const group = document.getElementById('optTargetGroup');
+
+  if (goal === 'target') {
+
+    group.style.display = 'block';
+
+  } else {
+
+    group.style.display = 'none';
+
+  }
+
+  runOptimizer();
+
+}
+
+
+
+function predictY(xA, xB, xC) {
+
+  if (!currentCalculationResults) return 0;
+
+  const { grandMean, results } = currentCalculationResults;
+
+  
+
+  let yHat = grandMean;
+
+  const codedDict = {
+
+    'A': xA,
+
+    'B': xB,
+
+    'C': xC,
+
+    'AB': xA * xB,
+
+    'AC': xA * xC,
+
+    'BC': xB * xC,
+
+    'ABC': xA * xB * xC
+
+  };
+
+
+
+  results.forEach(res => {
+
+    if (res.inModel) {
+
+      yHat += res.coef * codedDict[res.key];
+
+    }
+
+  });
+
+  return yHat;
+
+}
+
+
+
+function codedToActual(sym, xVal) {
+
+  const f = factorInfo[sym];
+
+  if (f.type === '문자형') {
+
+    return xVal >= 0 ? `${f.highVal}` : `${f.lowVal}`;
+
+  }
+
+  const low = parseFloat(f.lowVal) || 0;
+
+  const high = parseFloat(f.highVal) || 0;
+
+  const actual = low + ((xVal - (-1)) / 2) * (high - low);
+
+  return `${actual.toFixed(2)} ${f.unit}`.trim();
+
+}
+
+
+
+function runOptimizer() {
+
+  if (!currentCalculationResults) return;
+
+
+
+  const goal = document.getElementById('optGoalSelect').value;
+
+  const targetY = parseFloat(document.getElementById('optTargetY').value) || 0;
+
+  const step = parseFloat(document.getElementById('optStepSelect').value) || 0.05;
+
+
+
+  const aSteps = factorInfo.A.type === '수치형' ? getGridSteps(step) : [-1, 1];
+
+  const bSteps = factorInfo.B.type === '수치형' ? getGridSteps(step) : [-1, 1];
+
+  const cSteps = factorInfo.C.type === '수치형' ? getGridSteps(step) : [-1, 1];
+
+
+
+  let bestXA = 0, bestXB = 0, bestXC = 0;
+
+  let bestY = 0;
+
+  let bestMetric = (goal === 'maximize') ? -Infinity : Infinity;
+
+
+
+  aSteps.forEach(xA => {
+
+    bSteps.forEach(xB => {
+
+      cSteps.forEach(xC => {
+
+        const yHat = predictY(xA, xB, xC);
+
+        let metric = 0;
+
+
+
+        if (goal === 'target') {
+
+          metric = Math.abs(yHat - targetY); // 오차 최소화
+
+        } else if (goal === 'maximize') {
+
+          metric = yHat; // 반응치 극대화
+
+        } else if (goal === 'minimize') {
+
+          metric = yHat; // 반응치 극소화
+
+        }
+
+
+
+        let isBetter = false;
+
+        if (goal === 'target' || goal === 'minimize') {
+
+          if (metric < bestMetric) isBetter = true;
+
+        } else if (goal === 'maximize') {
+
+          if (metric > bestMetric) isBetter = true;
+
+        }
+
+
+
+        if (isBetter) {
+
+          bestMetric = metric;
+
+          bestXA = xA;
+
+          bestXB = xB;
+
+          bestXC = xC;
+
+          bestY = yHat;
+
+        }
+
+      });
+
+    });
+
+  });
+
+
+
+  // UI 업데이트
+
+  document.getElementById('optCodedLevels').innerText = 
+
+    `x_A = ${bestXA >= 0 ? '+' : ''}${bestXA.toFixed(2)},  x_B = ${bestXB >= 0 ? '+' : ''}${bestXB.toFixed(2)},  x_C = ${bestXC >= 0 ? '+' : ''}${bestXC.toFixed(2)}`;
+
+
+
+  const nameA = factorInfo.A.name, nameB = factorInfo.B.name, nameC = factorInfo.C.name;
+
+  const actA = codedToActual('A', bestXA);
+
+  const actB = codedToActual('B', bestXB);
+
+  const actC = codedToActual('C', bestXC);
+
+
+
+  document.getElementById('optActualLevels').innerHTML = 
+
+    `<strong>${nameA}</strong> = ${actA}, &nbsp; <strong>${nameB}</strong> = ${actB}, &nbsp; <strong>${nameC}</strong> = ${actC}`;
+
+
+
+  document.getElementById('optPredY').innerText = bestY.toFixed(2);
+
+
+
+  if (goal === 'target') {
+
+    const err = Math.abs(bestY - targetY);
+
+    const desirability = Math.exp(-err / (currentCalculationResults.s || 1));
+
+    document.getElementById('optDesirability').innerText = `만족도(Desirability): d = ${desirability.toFixed(3)} (목표 차이: ${err.toFixed(2)})`;
+
+  } else if (goal === 'maximize') {
+
+    document.getElementById('optDesirability').innerText = `최적화 조건: 전체 변수 영역 내 최대 반응치 탐색`;
+
+  } else {
+
+    document.getElementById('optDesirability').innerText = `최적화 조건: 전체 변수 영역 내 최소 반응치 탐색`;
+
+  }
+
+
+
+  // 슬라이더 초기 위치를 최적값으로 맞춤
+
+  document.getElementById('simRangeA').value = bestXA;
+
+  document.getElementById('simRangeB').value = bestXB;
+
+  document.getElementById('simRangeC').value = bestXC;
+
+
+
+  // 인자 B 범주형 여부에 따라 슬라이더 속성 조정
+
+  document.getElementById('simRangeA').step = factorInfo.A.type === '수치형' ? '0.01' : '2';
+
+  document.getElementById('simRangeB').step = factorInfo.B.type === '수치형' ? '0.01' : '2';
+
+  document.getElementById('simRangeC').step = factorInfo.C.type === '수치형' ? '0.01' : '2';
+
+
+
+  updateInteractivePrediction();
+
+}
+
+
+
+function getGridSteps(step) {
+
+  const steps = [];
+
+  for (let x = -1; x <= 1.0001; x += step) {
+
+    steps.push(Math.round(x * 100) / 100);
+
+  }
+
+  return steps;
+
+}
+
+
+
+// 시뮬레이터 실시간 슬라이더 반응 연산
+
+function updateInteractivePrediction() {
+
+  const xA = parseFloat(document.getElementById('simRangeA').value);
+
+  const xB = parseFloat(document.getElementById('simRangeB').value);
+
+  const xC = parseFloat(document.getElementById('simRangeC').value);
+
+
+
+  const nameA = factorInfo.A.name, nameB = factorInfo.B.name, nameC = factorInfo.C.name;
+
+  const actA = codedToActual('A', xA);
+
+  const actB = codedToActual('B', xB);
+
+  const actC = codedToActual('C', xC);
+
+
+
+  document.getElementById('simLabelA').innerText = `${nameA} (A):`;
+
+  document.getElementById('simValA').innerText = `${actA} (x=${xA >= 0 ? '+' : ''}${xA.toFixed(2)})`;
+
+
+
+  document.getElementById('simLabelB').innerText = `${nameB} (B):`;
+
+  document.getElementById('simValB').innerText = `${actB} (x=${xB >= 0 ? '+' : ''}${xB.toFixed(2)})`;
+
+
+
+  document.getElementById('simLabelC').innerText = `${nameC} (C):`;
+
+  document.getElementById('simValC').innerText = `${actC} (x=${xC >= 0 ? '+' : ''}${xC.toFixed(2)})`;
+
+
+
+  const yHat = predictY(xA, xB, xC);
+
+  document.getElementById('simLivePredY').innerText = yHat.toFixed(2);
+
+
+
+  const goal = document.getElementById('optGoalSelect').value;
+
+  if (goal === 'target') {
+
+    const targetY = parseFloat(document.getElementById('optTargetY').value) || 0;
+
+    const diff = yHat - targetY;
+
+    document.getElementById('simLiveDiff').innerText = `목표값(${targetY.toFixed(1)})과의 편차: ${diff >= 0 ? '+' : ''}${diff.toFixed(2)}`;
+
+  } else {
+
+    document.getElementById('simLiveDiff').innerText = `현재 선택 인자의 회귀 예측 반응치입니다.`;
+
+  }
+
+}
+
+
+
+function resetDefault() {
+
+  replicateCount = 1;
+
+  document.getElementById('replicateCountSelect').value = '1';
+
+
+
+  factorInfo = {
+
+    A: { symbol: 'A', name: 'Temp', type: '수치형', lowVal: '160', highVal: '180', unit: '°C' },
+
+    B: { symbol: 'B', name: 'Gas', type: '문자형', lowVal: 'N2', highVal: 'O2', unit: '-' },
+
+    C: { symbol: 'C', name: 'Pre', type: '수치형', lowVal: '5', highVal: '10', unit: 'bar' }
+
+  };
+
+  initFactorConfigTable();
+
+  updateFactorsDef();
+
+  renderDesignAndInputTables();
+
+  setPreset('all');
+
+}
+
+
+
+window.onload = () => {
+
+  initFactorConfigTable();
+
+  updateFactorsDef();
+
+  renderDesignAndInputTables();
+
+  calculateDOE();
+
+  switchStep(1);
+
+};
+
+</script>
+
+</body>
+
+</html>
+

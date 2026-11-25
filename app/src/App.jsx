@@ -1,842 +1,270 @@
-import React, { useState, useEffect, useRef } from 'react';
-import * as XLSX from 'xlsx';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Save, FolderOpen, PlusCircle, Home } from 'lucide-react';
 import {
-  PenTool, BarChart2, Zap, CheckCircle, FileText,
-  Monitor, RefreshCw, Database, FolderOpen,
-  Save, X, Clock, Settings, LogOut, User
-} from 'lucide-react';
-import { supabase } from './supabaseClient';
+  analyzeDOE,
+  createSampleFilmProject,
+  createDefaultBlankProject,
+} from './doeEngine';
+import { StartScreen, SaveListModal } from './components/StartScreen';
+import Step01Design from './components/Step01Design';
+import Step02Measurement from './components/Step02Measurement';
+import Step03Graphs from './components/Step03Graphs';
+import Step04FullModel from './components/Step04FullModel';
+import Step05ReducedModel from './components/Step05ReducedModel';
+import Step06Residuals from './components/Step06Residuals';
+import Step07MathModel from './components/Step07MathModel';
+import Step08Optimizer from './components/Step08Optimizer';
+import Step09Confirmation from './components/Step09Confirmation';
+import Step10Report from './components/Step10Report';
 
-// ─── Components ───────────────────────────────────────────────────────────
-import FactorConfig from './components/FactorConfig';
-import ExperimentTable from './components/ExperimentTable';
-import AnalysisDashboard from './components/AnalysisDashboard';
-import OptimizationPanel from './components/OptimizationPanel';
-import VerificationPanel from './components/VerificationPanel';
-import ReportPanel from './components/ReportPanel';
-import ProjectVault from './components/ProjectVault';
-import ComparisonPanel from './components/ComparisonPanel';
-import Auth from './components/Auth';
+const LS_PROJECTS_KEY = 'doe_lab_saved_projects_v2';
 
-// ─── Constants & Utils ────────────────────────────────────────────────────
-import { DEFAULT_FACTORS, DEFAULT_VERIFY, INDUSTRY_TEMPLATES, RUN_COUNTS } from './constants';
-import { validateYield, validateFactor, isValidYield } from './utils';
-import { translations } from './translations';
+const STEP_ITEMS = [
+  { id: 1, title: '실험설계' },
+  { id: 2, title: '실험 결과 입력' },
+  { id: 3, title: 'Graph 분석' },
+  { id: 4, title: '통계 분석 (풀링 전)' },
+  { id: 5, title: '축소 모형 (순차 풀링)' },
+  { id: 6, title: '잔차분석' },
+  { id: 7, title: '수학적 모형' },
+  { id: 8, title: '반응 최적화' },
+  { id: 9, title: '재현 실험 및 가설검정' },
+  { id: 10, title: '결과 리포트 작성' },
+];
 
-// ─── API Base URL ──────────────────────────────────────────────────────────
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
-// ─── localStorage 유틸 ───────────────────────────────────────────────────────
-const LS = {
-  factors: 'doe_factors', runs: 'doe_runs', result: 'doe_result',
-  verify: 'doe_verify', industry: 'doe_industry', tab: 'doe_tab',
-  projectId: 'doe_project_id', projectName: 'doe_project_name',
-  lang: 'doe_lang'
-};
-const loadLS = (key, fb) => { try { const v = localStorage.getItem(LS[key]); return v !== null ? JSON.parse(v) : fb; } catch { return fb; } };
-const saveLS = (key, val) => { try { localStorage.setItem(LS[key], JSON.stringify(val)); } catch { console.error('LocalStorage Save Error:'); } };
-const clearLS = () => Object.values(LS).forEach(k => localStorage.removeItem(k));
+function loadSavedProjects() {
+  try {
+    const raw = localStorage.getItem(LS_PROJECTS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return [createSampleFilmProject()];
+}
 
 export default function App() {
-  const [lang, setLang] = useState(() => loadLS('lang', 'ko'));
-  const t = (path) => {
-    const keys = path.split('.');
-    let obj = translations[lang];
-    for (const key of keys) {
-      if (!obj || !obj[key]) return path;
-      obj = obj[key];
-    }
-    return obj;
-  };
-
-  // 프로토타입 단계: VITE_ENABLE_AUTH가 'true'가 아닌 경우 인증 화면 우회 (기본 데모 세션 사용)
-  const isAuthEnabled = import.meta.env.VITE_ENABLE_AUTH === 'true';
-  const PROTOTYPE_SESSION = {
-    user: { id: 'prototype-demo-user', email: 'demo@prototype.local' },
-    access_token: 'prototype-token'
-  };
-
-  const [session, setSession] = useState(() => isAuthEnabled ? null : PROTOTYPE_SESSION);
-  const [user, setUser] = useState(() => isAuthEnabled ? null : PROTOTYPE_SESSION.user);
+  const [savedProjects, setSavedProjects] = useState(loadSavedProjects);
+  const [project, setProject] = useState(() => savedProjects[0] || createSampleFilmProject());
+  const [view, setView] = useState('start'); // 'start' | 'workspace'
+  const [currentStep, setCurrentStep] = useState(1);
+  const [maxVisitedStep, setMaxVisitedStep] = useState(1);
+  const [isDirty, setIsDirty] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      if (currentSession) {
-        setSession(currentSession);
-        setUser(currentSession.user);
-      } else if (!isAuthEnabled) {
-        setSession(PROTOTYPE_SESSION);
-        setUser(PROTOTYPE_SESSION.user);
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      if (currentSession) {
-        setSession(currentSession);
-        setUser(currentSession.user);
-      } else if (!isAuthEnabled) {
-        setSession(PROTOTYPE_SESSION);
-        setUser(PROTOTYPE_SESSION.user);
-      } else {
-        setSession(null);
-        setUser(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [isAuthEnabled]);
-
-  // ─── 백엔드 백그라운드 자동 웜업 핑 ──────────────────────────────────────────
-  useEffect(() => {
-    // 앱 진입 시 Render Cold Start 대비 백그라운드 핑 전송
-    fetch(API + '/api/health').catch(() => {});
-  }, []);
-
-  // API Call Wrapper with Auth & Auto Retry (Cold Start 대비 최대 3회 재시도)
-  const apiCall = async (endpoint, method = 'GET', body = null, timeoutMs = 60000, retries = 3, retryDelayMs = 4000) => {
-    const headers = {
-      'Content-Type': 'application/json',
-    };
-    if (session?.access_token) {
-      headers['Authorization'] = `Bearer ${session.access_token}`;
-    }
-
-    const config = { method, headers };
-    if (body) config.body = JSON.stringify(body);
-
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-      try {
-        const resp = await fetch(API + endpoint, { ...config, signal: controller.signal });
-        clearTimeout(timer);
-        if (!resp.ok) {
-          const err = await resp.json().catch(() => ({}));
-          const detail = err.detail;
-          const msg = typeof detail === 'string'
-            ? detail
-            : Array.isArray(detail)
-              ? detail.map(d => `${d.loc?.join('.')} - ${d.msg}`).join('; ')
-              : typeof detail === 'object' && detail !== null
-                ? JSON.stringify(detail)
-                : (err.message || 'API Error');
-          throw new Error(msg);
-        }
-        return await resp.json();
-      } catch (err) {
-        clearTimeout(timer);
-        const isNetworkOrTimeout = err.name === 'AbortError' || err.message?.includes('fetch') || err.message?.includes('NetworkError') || err.message?.includes('Failed to fetch');
-        
-        // 마지막 시도이고 네트워크/타임아웃 에러인 경우
-        if (attempt === retries) {
-          if (err.name === 'AbortError') {
-            const timeoutErr = new Error('timeout');
-            timeoutErr.isTimeout = true;
-            throw timeoutErr;
-          }
-          throw err;
-        }
-
-        // 네트워크/타임아웃 에러 시 다음 재시도 전 대기
-        if (isNetworkOrTimeout) {
-          await new Promise(res => setTimeout(res, retryDelayMs));
-        } else {
-          throw err; // HTTP 4xx/5xx 등 명확한 API 에러는 바로 throw
-        }
-      }
-    }
-  };
-
-  const [currentTab, setCurrentTab] = useState(() => {
-    const tabLS = loadLS('tab', 1), r = loadLS('runs', []), res = loadLS('result', null);
-    if (tabLS >= 3 && !res) return r.length > 0 ? 2 : 1;
-    if (tabLS >= 2 && r.length === 0) return 1;
-    return tabLS;
-  });
-  const [runs, setRuns] = useState(() => loadLS('runs', []));
-  const [verifyRuns, setVerifyRuns] = useState(() => loadLS('verify', DEFAULT_VERIFY));
-  const [analysisResult, setAnalysisResult] = useState(() => loadLS('result', null));
-  const [isLoading, setIsLoading] = useState(false);
-  const [theme, setTheme] = useState('light-gray-blue');
-  const [industry, setIndustry] = useState(() => loadLS('industry', '사출성형'));
-  const [factors, setFactors] = useState(() => loadLS('factors', DEFAULT_FACTORS));
-  const [lastSaved, setLastSaved] = useState(null);
-  const [exportLoading, setExportLoading] = useState(false);
-
-  const [projectId, setProjectId] = useState(() => loadLS('projectId', null));
-  const [projectName, setProjectName] = useState(() => loadLS('projectName', ''));
-  const [showProjectPanel, setShowProjectPanel] = useState(false);
-  const [projectList, setProjectList] = useState([]);
-  const [compareIds, setCompareIds] = useState([]);
-  const [compareProjectDetails, setCompareProjectDetails] = useState([]);
-  const [dbLoading, setDbLoading] = useState(false);
-  const [dbMsg, setDbMsg] = useState('');
-
-  const toggleCompare = (id) => {
-    setCompareIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
-
-  const excelRef = useRef(null);
-  const verifyExcelRef = useRef(null);
-  const reportRef = useRef(null);
-
-  useEffect(() => { document.documentElement.setAttribute('data-theme', theme); }, [theme]);
-  useEffect(() => { saveLS('factors', factors); saveLS('industry', industry); }, [factors, industry]);
-  useEffect(() => { saveLS('runs', runs); }, [runs]);
-  useEffect(() => { if (analysisResult) { saveLS('result', analysisResult); } }, [analysisResult]);
-  useEffect(() => { saveLS('verify', verifyRuns); }, [verifyRuns]);
-  useEffect(() => { saveLS('tab', currentTab); }, [currentTab]);
-  useEffect(() => { saveLS('projectId', projectId); }, [projectId]);
-  useEffect(() => { saveLS('projectName', projectName); }, [projectName]);
-  useEffect(() => { saveLS('lang', lang); }, [lang]);
-  useEffect(() => { if (dbMsg) { const t = setTimeout(() => setDbMsg(''), 4000); return () => clearTimeout(t); } }, [dbMsg]);
-
-  // compareIds 변경 시 상세 데이터(analysis_result 포함) 자동 로드
-  useEffect(() => {
-    if (compareIds.length === 0) { setCompareProjectDetails([]); return; }
-    const loadDetails = async () => {
-      const results = await Promise.allSettled(
-        compareIds.map(id => apiCall(`/api/projects/${id}`))
-      );
-      const validDetails = results
-        .filter(r => r.status === 'fulfilled')
-        .map(r => ({
-          ...r.value.project,
-          analysis_result: r.value.analysis_result
-        }));
-      setCompareProjectDetails(validDetails);
-    };
-    loadDetails();
-  }, [compareIds]);
-
-  const handleIndustryChange = (ind) => {
-    setIndustry(ind);
-    const tmpl = INDUSTRY_TEMPLATES[ind];
-    if (tmpl) { setFactors(tmpl); setRuns([]); setAnalysisResult(null); }
-  };
-
-  const addFactor = () => {
-    if (factors.length >= 5) return;
-    const newKey = 'f' + Date.now();
-    setFactors([...factors, { key: newKey, name: '', min: 0, max: 100, unit: '' }]);
-    setRuns([]); setAnalysisResult(null);
-  };
-  const removeFactor = (key) => {
-    if (factors.length <= 2) return;
-    setFactors(factors.filter(f => f.key !== key));
-    setRuns([]); setAnalysisResult(null);
-  };
-  const updateFactor = (key, field, val) => {
-    setFactors(factors.map(f => f.key === key ? { ...f, [field]: val } : f));
-    if (field === 'min' || field === 'max') { setRuns([]); setAnalysisResult(null); }
-  };
-
-  const generateLocalRuns = (factorList) => {
-    const k = factorList.length;
-    const numRuns = Math.pow(2, k);
-    const runsList = [];
-    for (let i = 0; i < numRuns; i++) {
-      const runObj = { id: i + 1, yieldVal: '' };
-      factorList.forEach((f, idx) => {
-        const bit = (i >> (k - 1 - idx)) & 1;
-        runObj[f.key] = bit === 0 ? parseFloat(f.min) : parseFloat(f.max);
-      });
-      runsList.push(runObj);
-    }
-    return runsList;
-  };
-
-  const generateRuns = async () => {
-    setIsLoading(true);
     try {
-      const d = await apiCall('/api/design/generate', 'POST', { factors }, 60000, 3, 3000);
-      setRuns(d.runs);
-      setCurrentTab(2);
-    } catch (err) {
-      console.warn('API 호출 실패 - 로컬 오프라인 엔진으로 자동 전환합니다:', err);
-      // 백엔드 연결 불가 시 로컬 모드로 자동 전환하여 실험계획 생성
-      const localRuns = generateLocalRuns(factors);
-      setRuns(localRuns);
-      setCurrentTab(2);
-    }
-    setIsLoading(false);
-  };
-
-  const runAnalysis = async () => {
-    setIsLoading(true);
-    try {
-      const payload = {
-        runs: runs.map(r => ({ ...r, yieldVal: parseFloat(r.yieldVal) })),
-        factors,
-      };
-      const d = await apiCall(`/api/analyze?industry=${encodeURIComponent(industry)}`, 'POST', payload, 90000);
-      setAnalysisResult(d);
-      setCurrentTab(3);
-
-      // 곡률(Curvature) 감지 시 RSM 전환 제안
-      if (d.curvature_pvalue < 0.05) {
-        setTimeout(() => {
-          if (window.confirm(t('analysis.curvatureDetected') || '곡률(Curvature)이 발견되었습니다. 정밀 분석을 위해 RSM(반응표면분석)으로 전환하시겠습니까? \n확인을 누르면 CCD(중심합성설계)를 위한 추가 실험항이 생성됩니다.')) {
-            upgradeToRSM();
-          }
-        }, 500);
-      }
-    } catch (err) {
-      if (err.isTimeout || err.name === 'AbortError') {
-        alert(t('error.timeout') || '요청 시간이 초과되었습니다. 서버가 시작 중일 수 있습니다. 30초 후 다시 시도해 주세요.');
-      } else {
-        alert(t('error.analysis') || '분석 중 오류가 발생했습니다. 데이터를 확인하고 다시 시도해 주세요.');
-      }
-    }
-    setIsLoading(false);
-  };
-
-  const upgradeToRSM = async () => {
-    setIsLoading(true);
-    try {
-      const d = await apiCall('/api/design/ccd', 'POST', { factors });
-      const nextId = Math.max(...runs.map(r => r.id)) + 1;
-      const newRuns = d.runs.map((r, i) => ({
-        ...r,
-        id: nextId + i,
-        runOrder: nextId + i,
-        isAxial: true // 축점 표시용
-      }));
-      setRuns([...runs, ...newRuns]);
-      setAnalysisResult(null); // 분석 결과 초기화 (추가 실험 필요)
-      setCurrentTab(2);
-      setDbMsg('✓ RSM(CCD) 전환 완료. 추가 실험값을 입력하세요.');
-    } catch (err) {
-      alert('RSM 전환 중 오류가 발생했습니다: ' + err.message);
-    }
-    setIsLoading(false);
-  };
-
-  const updateYield = (id, val) => setRuns(runs.map(r => r.id === id ? { ...r, yieldVal: val } : r));
-  const updateVerifyYield = (id, val) => setVerifyRuns(verifyRuns.map(r => r.id === id ? { ...r, yieldVal: val } : r));
-
-  const exportFullReport = () => {
-    setExportLoading(true);
-    console.log('[DOE Export] Start. runs:', runs.length, 'result:', !!analysisResult);
-    try {
-      if (!runs.length) { alert('실험표를 먼저 생성해주세요.'); setExportLoading(false); return; }
-      const wb = XLSX.utils.book_new();
-
-      // --- Sheet 0: Dashboard Summary (보고서 요약) ---
-      if (analysisResult) {
-        const diag = getAIDiagnosisLines();
-        const pred = Number(analysisResult.optimal_yield_pred || 0);
-        const fvCount = verifyRuns.filter(r => r.yieldVal !== '').length;
-        const vAvg = verifyRuns.reduce((s, r) => s + parseFloat(r.yieldVal || 0), 0) / Math.max(fvCount, 1);
-        const vErr = Math.abs(vAvg - pred);
-        const g = analysisResult.golden_solution || {};
-
-        const dashboardData = [
-          ['DOE AI 공정 최적화 최종 보고서'],
-          [],
-          ['[1. 핵심 진단 요약]'],
-          ...diag.map(l => [l]),
-          [],
-          ['[2. Golden Solution (최적 조건)]'],
-          ['인자명', '최적 설정값', '단위'],
-          ...factors.map(f => [f.name, g[f.key] === 1 ? f.max : f.min, f.unit]),
-          [],
-          ['[3. 현장 재현 검증 결과]'],
-          ['예측 수율', pred.toFixed(2) + '%'],
-          ['현장 실측 평균', vAvg.toFixed(2) + '%'],
-          ['오차 범위', vErr.toFixed(2) + '%p'],
-          ['최종 판정', vErr <= 2 ? 'PASS (유효함)' : 'FAIL (오차큼)'],
-          [],
-          ['[4. 비즈니스 ROI 기대 성과]'],
-          ['연간 예상 절감액', '₩' + (analysisResult.roi_amount || 0).toLocaleString()],
-          ['수율 개선량', Number(analysisResult.yield_gain || 0).toFixed(2) + '%p'],
-          [],
-          ['발행일시: ' + new Date().toLocaleString()]
-        ];
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dashboardData), '보고서');
-      }
-
-      // Sheet 1: Raw Data
-      const hdr = ['Run#', ...factors.map(f => f.name + '(' + f.unit + ')'), '수율(%)'];
-      const dataRows = runs.map(r => {
-        const fv = r.factor_values || r;
-        return [r.runOrder, ...factors.map(f => fv[f.key] != null ? fv[f.key] : ''), r.yieldVal !== '' ? parseFloat(r.yieldVal) : ''];
-      });
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['DOE Raw Data'], ['Project: ' + (projectName || industry)], [], hdr, ...dataRows]), '실험데이터');
-      console.log('[DOE Export] Sheet1 OK');
-
-      if (analysisResult) {
-        // Sheet 2: Analysis Detail
-        const diag = getAIDiagnosisLines();
-        const s2 = [['AI 진단 상세'], [], ['R-Sq', (Number(analysisResult.r_squared || 0) * 100).toFixed(1) + '%'], [],
-          ...diag.map(l => [l]), [], ['인자', 't-value', 'p-value'],
-          ...Object.entries(analysisResult.tvalues || {}).map(([k, v]) => [analysisResult.factor_names && analysisResult.factor_names[k] || k, Number(v).toFixed(3), Number((analysisResult.pvalues && analysisResult.pvalues[k]) || 1).toFixed(3)])
-        ];
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s2), '분석상세');
-
-        // Sheet 3: Golden Solution Detail
-        const g = analysisResult.golden_solution || {};
-        const s3 = [['Golden Solution'], [], ['인자', '최적값', '단위'],
-          ...factors.map(f => [f.name, g[f.key] === 1 ? f.max : f.min, f.unit]), [],
-          ['예측수율', Number(analysisResult.optimal_yield_pred || 0).toFixed(1) + '%'],
-          ['현재평균', Number(analysisResult.current_avg_yield || 0).toFixed(1) + '%'],
-          ['개선량', Number(analysisResult.yield_gain || 0).toFixed(1) + '%p'],
-          ['ROI', '₩' + (analysisResult.roi_amount || 0).toLocaleString()]
-        ];
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s3), '최적조건상세');
-
-        // Sheet 4: Verification Detail
-        const fv = verifyRuns.filter(r => r.yieldVal !== '').length;
-        if (fv > 0) {
-          const pred = Number(analysisResult.optimal_yield_pred || 0);
-          const avg = verifyRuns.reduce((s, r) => s + parseFloat(r.yieldVal || 0), 0) / Math.max(fv, 1);
-          const err = Math.abs(avg - pred);
-          const s4 = [['검증결과 상세'], [], ['예측', pred.toFixed(1) + '%'], ['평균', avg.toFixed(1) + '%'], ['오차', err.toFixed(1) + '%p'], ['판정', err <= 2 ? 'PASS' : 'FAIL'],
-            [], ...verifyRuns.map((r, i) => [i + 1, r.yieldVal || '-'])
-          ];
-          XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s4), '검증실험');
-        }
-      }
-
-      const nm = (projectName || industry || 'DOE').replace(/[^a-zA-Z0-9\uAC00-\uD7AF]/g, '');
-      const fn = 'DOE_Final_Report_' + nm + '_' + new Date().toISOString().slice(0, 10) + '.xlsx';
-      const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-      const blob = new Blob([buf], { type: 'application/octet-stream' });
-      const u = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = u;
-      a.download = fn;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      setTimeout(function() {
-        a.click();
-        setTimeout(function() {
-          document.body.removeChild(a);
-          URL.revokeObjectURL(u);
-          console.log('[DOE Export] DONE:', fn);
-        }, 300);
-      }, 50);
-    } catch (e) {
-      console.error('[DOE Export] ERROR:', e);
-      alert('다운로드 오류: ' + e.message);
-    }
-    setExportLoading(false);
-  };
-
-  const downloadTemplate = () => {
-    try {
-      if (!runs.length) { alert('실험표를 먼저 생성해주세요.'); return; }
-      setExportLoading(true);
-
-      const wb = XLSX.utils.book_new();
-      
-      // 1. 헤더 (Run#, 인자명(단위)..., 수율(%))
-      const dataHeader = [['Run#', ...factors.map(f => `${f.name}${f.unit ? `(${f.unit})` : ''}`), '수율(%)']];
-      
-      // 2. 데이터 행
-      const dataRows = runs.map(r => {
-        const fv = r.factor_values || {};
-        return [r.runOrder, ...factors.map(f => fv[f.key] ?? ''), ''];
-      });
-
-      const combinedData = [...dataHeader, ...dataRows];
-      const ws = XLSX.utils.aoa_to_sheet(combinedData);
-      
-      // 셀 너비 설정 (가독성 확보)
-      ws['!cols'] = [{ wch: 8 }, ...factors.map(() => ({ wch: 15 })), { wch: 12 }];
-
-      XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-
-      const now = new Date();
-      const dateStr = `${now.getFullYear()}.${String(now.getMonth() + 1).padStart(2, '0')}.${String(now.getDate()).padStart(2, '0')}`;
-      const fileName = `DOE_Template_${dateStr}.xlsx`;
-
-      XLSX.writeFile(wb, fileName);
-      
-      console.log('[DOE Template] Simplified Template Generated:', fileName);
-    } catch (e) {
-      console.error('[DOE Template] ERROR:', e);
-      alert('템플릿 생성 중 오류가 발생했습니다: ' + e.message);
-    } finally {
-      setExportLoading(false);
-    }
-  };
-
-
-
-  const handleExcelUpload = (e) => {
-    const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = evt => {
-      try {
-        const wb = XLSX.read(evt.target.result, { type: 'binary' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-        const yieldColIdx = factors.length + 1;
-        setRuns(runs.map((r, i) => {
-          const row = data[i + 1];
-          const rv = row ? row[yieldColIdx] : undefined;
-          return { ...r, yieldVal: (rv !== undefined && rv !== '') ? String(rv) : r.yieldVal };
-        }));
-      } catch (err) { alert('엑셀 읽기 오류: ' + err.message); }
-    };
-    reader.readAsBinaryString(file);
-    e.target.value = '';
-  };
-
-  const handleVerifyUpload = (e) => {
-    const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = evt => {
-      try {
-        const wb = XLSX.read(evt.target.result, { type: 'binary' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-        const yieldColIdx = factors.length + 1;
-        setVerifyRuns(verifyRuns.map((r, i) => {
-          const row = data[i + 1];
-          const rv = row ? row[yieldColIdx] : undefined;
-          return { ...r, yieldVal: (rv !== undefined && rv !== '') ? String(rv) : r.yieldVal };
-        }));
-      } catch (err) { alert('엑셀 읽기 오류: ' + err.message); }
-    };
-    reader.readAsBinaryString(file);
-    e.target.value = '';
-  };
-
-  const generatePDF = async () => {
-    if (!reportRef.current) { alert('보고서 섹션을 찾을 수 없습니다.'); return; }
-    // 브라우저 프린트 기능을 호출하여 PDF로 저장 유도 (oklab 에러 완벽 해결)
-    window.print();
-  };
-
-  const handleReset = () => {
-    if (!window.confirm('모든 실험 데이터를 초기화하시겠습니까?')) return;
-    clearLS();
-    setRuns([]); setVerifyRuns(DEFAULT_VERIFY); setAnalysisResult(null);
-    setFactors(DEFAULT_FACTORS); setIndustry('사출성형'); setCurrentTab(1);
-    setLastSaved(null); setProjectId(null); setProjectName('');
-  };
-
-  const saveProject = async () => {
-    setDbLoading(true);
-    setDbMsg('Saving...');
-    try {
-      // 데이터 정제: 백엔드 모델(VerifyRunItem) 규격에 맞게 변환
-      const sanitizedVerifyRuns = verifyRuns.map(v => ({
-        id: Number(v.id),
-        yieldVal: (v.yieldVal !== null && v.yieldVal !== undefined && v.yieldVal !== "") ? Number(v.yieldVal) : null
-      }));
-
-      // JSON 직렬화 시 오류 유발 가능한 값(NaN, Infinity)을 null로 치환하는 Deep Clean
-      const cleanPayload = JSON.parse(JSON.stringify({
-        name: projectName || `${industry}_${new Date().toLocaleDateString()}`,
-        industry,
-        factors,
-        runs,
-        analysis_result: analysisResult,
-        verify_runs: sanitizedVerifyRuns
-      }, (key, value) => {
-        if (typeof value === 'number' && (isNaN(value) || !isFinite(value))) return null;
-        return value;
-      }));
-
-      const url = projectId ? `/api/projects/${projectId}` : '/api/projects';
-      const method = projectId ? 'PUT' : 'POST';
-      const res = await apiCall(url, method, cleanPayload);
-      
-      if (!projectId) {
-        setProjectId(res.id);
-        saveLS('projectId', res.id);
-        setProjectName(cleanPayload.name);
-        saveLS('projectName', cleanPayload.name);
-      }
-      setDbMsg('✓ Saved to Cloud');
-    } catch (err) {
-      console.error('Save Project Error:', err);
-      const errMsg = err?.message || String(err) || '알 수 없는 오류';
-      setDbMsg(`✗ Save failed: ${errMsg}`);
-    }
-    setDbLoading(false);
-  };
-
-  const loadProjectList = async () => {
-    setDbLoading(true);
-    try {
-      const res = await apiCall('/api/projects');
-      setProjectList(res?.projects || []);
-    } catch (err) {
-      setDbMsg(`✗ Load List failed: ${err?.message || '목록 조회 오류'}`);
-    }
-    setDbLoading(false);
-  };
-
-  const loadProjectDetail = async (id) => {
-    setDbLoading(true);
-    try {
-      const res = await apiCall(`/api/projects/${id}`);
-      const { project, factors, runs, analysis_result, verify_runs } = res;
-      setProjectId(project.id);
-      setProjectName(project.name);
-      setIndustry(project.industry);
-      setFactors(factors);
-      setRuns(runs);
-      setAnalysisResult(analysis_result);
-      setVerifyRuns(verify_runs || DEFAULT_VERIFY);
-      setShowProjectPanel(false);
-      setDbMsg(`✓ "${project.name}" 불러오기 완료`);
+      localStorage.setItem(LS_PROJECTS_KEY, JSON.stringify(savedProjects));
     } catch {
-      setDbMsg('✗ Load Detail failed');
+      // ignore quota errors
     }
-    setDbLoading(false);
+  }, [savedProjects]);
+
+  const updateProject = (patch) => {
+    setProject(prev => ({
+      ...prev,
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    }));
+    setIsDirty(true);
   };
 
-  const deleteProject = async (id, name) => {
-    try {
-      await apiCall(`/api/projects/${id}`, 'DELETE');
-      // compareIds에서 삭제된 ID 제거
-      setCompareIds(prev => prev.filter(cid => cid !== id));
-      loadProjectList();
-      if (projectId === id) handleReset();
-      setDbMsg(`✓ "${name}" 삭제 완료`);
-    } catch (err) {
-      setDbMsg(`✗ Delete failed: ${err?.message || '삭제 오류'}`);
-    }
+  const goToStep = (step) => {
+    setCurrentStep(step);
+    setMaxVisitedStep(m => Math.max(m, step));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const getAIDiagnosisLines = () => {
-    if (!analysisResult) return [];
-    const diag = analysisResult.ai_diagnosis || '';
-    return diag.split(' | ').filter(Boolean);
-  };
+  const handleSaveProject = (downloadFile = true) => {
+    const nextRev = (project.revision || 0) + (isDirty ? 1 : 0);
+    const updated = {
+      ...project,
+      revision: nextRev,
+      updatedAt: new Date().toISOString(),
+    };
+    setProject(updated);
+    setSavedProjects(prev => {
+      const exists = prev.some(p => p.id === updated.id);
+      if (exists) return prev.map(p => (p.id === updated.id ? updated : p));
+      return [updated, ...prev];
+    });
+    setIsDirty(false);
 
-  const completedCount = runs.filter(r => isValidYield(r.yieldVal)).length;
-  const hasFactorErrors = factors.some(f => validateFactor(f) !== null);
-  const hasYieldErrors = runs.some(r => validateYield(r.yieldVal) !== null);
-  const totalRuns = RUN_COUNTS[factors.length] ?? 20;
-  const canAnalyze = completedCount === totalRuns && !hasYieldErrors && !isLoading;
-  const verifyFilled = verifyRuns.filter(r => r.yieldVal !== '').length;
-  const verifyAvg = verifyFilled === 3
-    ? (verifyRuns.reduce((s, r) => s + parseFloat(r.yieldVal || 0), 0) / 3).toFixed(1)
-    : null;
-  const predictedYield = analysisResult?.optimal_yield_pred?.toFixed(1) ?? '--';
-  const verifyError = (verifyAvg && analysisResult)
-    ? Math.abs(parseFloat(verifyAvg) - analysisResult.optimal_yield_pred).toFixed(1)
-    : null;
-  const roiAmount = analysisResult?.roi_amount ?? 0;
-  const roiAmountKRW = roiAmount > 0 ? (roiAmount / 1e8).toFixed(1) : '--';
-
-  const renderTabContent = () => {
-    switch (currentTab) {
-      case 1:
-        return <FactorConfig
-          t={t}
-          industry={industry} handleIndustryChange={handleIndustryChange}
-          factors={factors} addFactor={addFactor} removeFactor={removeFactor} updateFactor={updateFactor}
-          generateRuns={generateRuns} isLoading={isLoading} hasFactorErrors={hasFactorErrors}
-          validateFactor={validateFactor}
-        />;
-      case 2:
-        return <ExperimentTable
-          t={t}
-          runs={runs} factors={factors} completedCount={completedCount} totalRuns={totalRuns}
-          downloadExcel={downloadTemplate} excelRef={excelRef}
-          updateYield={updateYield} runAnalysis={runAnalysis} isLoading={isLoading}
-          canAnalyze={canAnalyze} hasYieldErrors={hasYieldErrors}
-          validateYield={validateYield} isValidYield={isValidYield}
-        />;
-      case 3:
-        return <AnalysisDashboard
-          t={t}
-          analysisResult={analysisResult} factors={factors}
-          getAIDiagnosisLines={getAIDiagnosisLines} setCurrentTab={setCurrentTab}
-        />;
-      case 4:
-        return <OptimizationPanel
-          t={t}
-          analysisResult={analysisResult} factors={factors}
-          roiAmountKRW={roiAmountKRW} predictedYield={predictedYield} setCurrentTab={setCurrentTab}
-        />;
-      case 5:
-        return <VerificationPanel
-          t={t}
-          analysisResult={analysisResult} factors={factors} verifyRuns={verifyRuns}
-          verifyFilled={verifyFilled} verifyAvg={verifyAvg} verifyError={verifyError}
-          predictedYield={predictedYield} downloadVerifyExcel={exportFullReport}
-          verifyExcelRef={verifyExcelRef}
-          updateVerifyYield={updateVerifyYield} setCurrentTab={setCurrentTab}
-        />;
-      case 6:
-        return <ReportPanel
-          t={t}
-          reportRef={reportRef} industry={industry} factors={factors}
-          analysisResult={analysisResult} predictedYield={predictedYield}
-          verifyAvg={verifyAvg} verifyError={verifyError} roiAmountKRW={roiAmountKRW}
-          getAIDiagnosisLines={getAIDiagnosisLines} exportFullReport={exportFullReport} exportLoading={exportLoading}
-        />;
-      case 7:
-        return <ComparisonPanel
-          t={t}
-          projectList={compareProjectDetails}
-          compareIds={compareIds}
-        />;
-      default: return null;
+    if (downloadFile) {
+      const blob = new Blob([JSON.stringify(updated, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${updated.name}_${updated.revision}차.doe.json`;
+      a.click();
+      URL.revokeObjectURL(url);
     }
   };
 
-  const tabs = [
-    { id: 1, label: '설계', icon: Settings },
-    { id: 2, label: '입력', icon: PenTool },
-    { id: 3, label: '분석', icon: BarChart2 },
-    { id: 4, label: '최적화', icon: Zap },
-    { id: 5, label: '검증', icon: CheckCircle },
-    { id: 6, label: '보고서', icon: FileText },
-    { id: 7, label: '히스토리', icon: Database },
-  ];
+  const handleStartNew = () => {
+    const fresh = createDefaultBlankProject();
+    setProject(fresh);
+    setIsDirty(true);
+    setMaxVisitedStep(1);
+    setCurrentStep(1);
+    setView('workspace');
+  };
 
-  if (!session) {
-    return <Auth t={t} lang={lang} />;
-  }
+  const handleLoadProject = (proj) => {
+    setProject(proj);
+    setIsDirty(false);
+    setMaxVisitedStep(10);
+    setCurrentStep(1);
+    setView('workspace');
+  };
+
+  const handleDeleteProject = (id) => {
+    setSavedProjects(prev => prev.filter(p => p.id !== id));
+  };
+
+  const handleImportFile = (imported) => {
+    if (!imported || !imported.design || !imported.runs) {
+      alert('유효한 DOE 프로젝트 파일 형식이 아닙니다.');
+      return;
+    }
+    const next = { ...imported, id: imported.id || `imp_${Date.now()}` };
+    setSavedProjects(prev => [next, ...prev.filter(p => p.id !== next.id)]);
+    handleLoadProject(next);
+  };
+
+  // Real-time statistical analysis
+  const fullAnalysis = useMemo(() => {
+    return analyzeDOE({
+      factors: project.design.factors,
+      runs: project.runs,
+      pooledKeys: [],
+      alpha: project.alpha || 0.05,
+    });
+  }, [project.design.factors, project.runs, project.alpha]);
+
+  const reducedAnalysis = useMemo(() => {
+    return analyzeDOE({
+      factors: project.design.factors,
+      runs: project.runs,
+      pooledKeys: project.pooledKeys || [],
+      alpha: project.alpha || 0.05,
+    });
+  }, [project.design.factors, project.runs, project.pooledKeys, project.alpha]);
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-theme-main font-sans transition-colors duration-300">
-      <div className="md:w-64 md:flex-shrink-0 bg-[var(--color-sidebar-bg)] text-white shadow-xl flex flex-col z-20">
-        <header className="p-4 md:p-6 sticky md:static top-0 bg-[var(--color-header-bg)] text-[var(--color-header-text)] shadow-md border-b border-black/5 md:border-none md:shadow-none flex items-center justify-between md:flex-col md:items-start md:gap-4 transition-colors duration-300">
-          <div className="flex-1">
-            <h1 className="text-lg md:text-2xl font-bold tracking-wider flex items-center gap-2 text-black md:text-[var(--color-header-text)]">
-              <Zap size={24} className="text-yellow-500 md:text-yellow-400" fill="currentColor" />
-              DOE Auto
-            </h1>
-            <p className="hidden md:block text-sm text-blue-200 opacity-90 mt-1">현장 밀착형 스마트 실험계획법</p>
-          </div>
-          <div className="flex flex-col gap-3 w-full">
-            <div className="hidden md:flex flex-col items-start gap-1">
-              <span className="text-[10px] opacity-80 flex items-center gap-1 font-mono">
-                <User size={10}/> {user?.email}
-                {!isAuthEnabled && <span className="bg-yellow-400 text-blue-950 font-sans font-bold px-1.5 py-0.5 rounded text-[9px] ml-1">PROTOTYPE</span>}
-              </span>
-              {isAuthEnabled && (
-                <button onClick={() => supabase.auth.signOut()} className="text-[10px] font-bold text-red-200 hover:text-red-100 flex items-center gap-1">
-                  <LogOut size={10} /> {t('auth.logout') || 'Logout'}
-                </button>
-              )}
+    <div className="min-h-screen bg-[#ffffff] text-[#5b616e]">
+      {/* Persistent Top Header */}
+      <header className="bg-white border-b border-[#dee1e6] sticky top-0 z-30">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#0052ff] text-[#ffffff] font-bold text-xs flex items-center justify-center tracking-wider">
+              DOE
             </div>
-            
-            <div className="flex items-center gap-2">
-              <div className="hidden md:flex items-center bg-black/20 rounded-lg p-1">
-                <button
-                  onClick={() => setLang('ko')}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${lang === 'ko' ? 'bg-white text-blue-900' : 'text-blue-200 opacity-60'}`}
-                >
-                  KO
-                </button>
-                <button
-                  onClick={() => setLang('en')}
-                  className={`px-2 py-0.5 rounded text-[10px] font-bold transition ${lang === 'en' ? 'bg-white text-blue-900' : 'text-blue-200 opacity-60'}`}
-                >
-                  EN
-                </button>
-              </div>
-
-              <div className="flex items-center bg-black/5 md:bg-black/20 rounded-lg p-1">
-                <Monitor size={12} className="mx-1 opacity-60 hidden sm:block text-black md:text-white" />
-                <select value={theme} onChange={e => setTheme(e.target.value)}
-                  className="bg-transparent text-[10px] font-bold outline-none cursor-pointer appearance-none px-1 text-black md:text-white">
-                  <option value="light-gray-blue" className="text-black">Gray+Blue</option>
-                  <option value="white" className="text-black">White</option>
-                  <option value="black" className="text-black">Dark</option>
-                </select>
+            <div>
+              <h1 className="text-base md:text-lg font-bold text-[#0052ff] leading-tight">
+                현장에서 쉽게 즉시 사용하는 easyDOE
+              </h1>
+              <div className="text-xs text-[#7c828a]">
+                {project.name}_{project.revision || 1}차.doe.json ·{' '}
+                {isDirty ? (
+                  <span className="text-[#0052ff] font-semibold">변경 사항 있음 · 실험 저장 필요</span>
+                ) : (
+                  <span className="text-[#05b169]">저장 완료</span>
+                )}
               </div>
             </div>
-
-            <div className="md:hidden bg-[#152e6e] px-2 py-1.5 rounded-lg text-xs font-bold border border-blue-800 text-white self-end">
-              {t('step')} {currentTab}/7
-            </div>
           </div>
-        </header>
 
-        <nav className="hidden md:flex flex-col flex-1 p-4 gap-2 border-t border-black/10">
-          <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 ml-2">{t('workflow')}</div>
-          {tabs.map(tab => {
-            const Icon = tab.icon;
-            const isActive = currentTab === tab.id;
-            return (
-              <button key={tab.id} onClick={() => setCurrentTab(tab.id)}
-                className={`flex items-center gap-3 p-3 rounded-xl transition-all w-full text-left ${isActive ? 'sidebar-tab-active font-extrabold text-[1.125rem]' : 'sidebar-tab-idle font-medium text-[0.95rem]'}`}>
-                <Icon size={isActive ? 22 : 20} strokeWidth={isActive ? 2.5 : 2} />
-                <span>{t(`tabs.${tab.id}`)}</span>
-                {isActive && <div className="ml-auto w-2 h-2 rounded-full bg-[--color-success]" />}
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => handleSaveProject(true)} className="doe-btn doe-btn-primary text-xs py-2 px-3">
+              <Save size={14} /> 실험 저장
+            </button>
+            <button onClick={() => setShowSaveModal(true)} className="doe-btn doe-btn-secondary text-xs py-2 px-3">
+              <FolderOpen size={14} /> 저장 목록
+            </button>
+            <button onClick={handleStartNew} className="doe-btn doe-btn-secondary text-xs py-2 px-3">
+              <PlusCircle size={14} /> 새 실험 시작
+            </button>
+            {view === 'workspace' && (
+              <button onClick={() => setView('start')} className="doe-btn doe-btn-dark text-xs py-2 px-3">
+                <Home size={14} /> 시작 화면
               </button>
-            );
-          })}
-
-          <div className="mt-auto pt-4 border-t border-white/10 space-y-1">
-            {dbMsg && (
-              <div className={`px-2 py-1.5 text-xs rounded-lg mx-1 leading-snug ${dbMsg.startsWith('✓') ? 'bg-green-900/40 text-green-300' : 'bg-red-900/40 text-red-300'
-                }`}>{dbMsg}</div>
             )}
-            {projectId && (
-              <div className="flex items-center gap-1.5 px-2 py-1 text-xs text-blue-300 opacity-80">
-                <Database size={11} />
-                <span className="truncate">{projectName || t('projectList')}</span>
-              </div>
-            )}
-            <button onClick={saveProject} disabled={dbLoading || runs.length === 0}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-blue-200 hover:bg-blue-900/40 transition disabled:opacity-40">
-              <Save size={12} /> {dbLoading ? t('save') : projectId ? t('dbUpdate') : t('dbSave')}
-            </button>
-            <button onClick={() => { setShowProjectPanel(true); loadProjectList(); }}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-blue-200 hover:bg-blue-900/40 transition">
-              <FolderOpen size={12} /> {t('projectList')}
-            </button>
-            {lastSaved && (
-              <div className="flex items-center gap-1.5 px-2 py-1 text-xs text-blue-300 opacity-50">
-                <Clock size={10} />
-                {t('localSaveTime')} {lastSaved.toLocaleTimeString(lang === 'ko' ? 'ko-KR' : 'en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-              </div>
-            )}
-            <button onClick={handleReset}
-              className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-red-300 hover:bg-red-900/30 transition">
-              <RefreshCw size={11} /> {t('reset')}
-            </button>
           </div>
-        </nav>
-      </div>
+        </div>
+      </header>
 
-      <main className="flex-1 overflow-y-auto pb-24 md:pb-0 h-screen relative bg-theme-main transition-colors duration-300">
-        <div className="hidden md:block absolute top-0 right-0 p-6 opacity-5 pointer-events-none"><Settings size={200} /></div>
-        <div className="relative z-10 w-full">{renderTabContent()}</div>
+      <main className="max-w-7xl mx-auto px-4 md:px-6 py-6">
+        {view === 'start' ? (
+          <StartScreen
+            savedProjects={savedProjects}
+            onStartNew={handleStartNew}
+            onLoadProject={handleLoadProject}
+            onOpenSaveModal={() => setShowSaveModal(true)}
+          />
+        ) : (
+          <>
+            {/* 10-Step Navigation Grid */}
+            <nav aria-label="DOE 분석 10단계" className="step-nav-grid mb-6">
+              {STEP_ITEMS.map(st => {
+                const isActive = currentStep === st.id;
+                const isCompleted = !isActive && st.id <= maxVisitedStep;
+                return (
+                  <button
+                    key={st.id}
+                    onClick={() => goToStep(st.id)}
+                    className={`step-nav-btn ${isActive ? 'active' : isCompleted ? 'completed' : ''}`}
+                  >
+                    <span className="step-nav-num">{String(st.id).padStart(2, '0')}</span>
+                    <span className="step-nav-title">{st.title}</span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            {currentStep === 1 && (
+              <Step01Design project={project} updateProject={updateProject} onNext={() => goToStep(2)} />
+            )}
+            {currentStep === 2 && (
+              <Step02Measurement project={project} updateProject={updateProject} onPrev={() => goToStep(1)} onNext={() => goToStep(3)} />
+            )}
+            {currentStep === 3 && (
+              <Step03Graphs project={project} fullAnalysis={fullAnalysis} onPrev={() => goToStep(2)} onNext={() => goToStep(4)} />
+            )}
+            {currentStep === 4 && (
+              <Step04FullModel project={project} updateProject={updateProject} fullAnalysis={fullAnalysis} onPrev={() => goToStep(3)} onNext={() => goToStep(5)} />
+            )}
+            {currentStep === 5 && (
+              <Step05ReducedModel project={project} updateProject={updateProject} reducedAnalysis={reducedAnalysis} onPrev={() => goToStep(4)} onNext={() => goToStep(6)} />
+            )}
+            {currentStep === 6 && (
+              <Step06Residuals reducedAnalysis={reducedAnalysis} onPrev={() => goToStep(5)} onNext={() => goToStep(7)} />
+            )}
+            {currentStep === 7 && (
+              <Step07MathModel project={project} reducedAnalysis={reducedAnalysis} onPrev={() => goToStep(6)} onNext={() => goToStep(8)} />
+            )}
+            {currentStep === 8 && (
+              <Step08Optimizer project={project} updateProject={updateProject} reducedAnalysis={reducedAnalysis} onPrev={() => goToStep(7)} onNext={() => goToStep(9)} />
+            )}
+            {currentStep === 9 && (
+              <Step09Confirmation project={project} updateProject={updateProject} reducedAnalysis={reducedAnalysis} onPrev={() => goToStep(8)} onNext={() => goToStep(10)} />
+            )}
+            {currentStep === 10 && (
+              <Step10Report project={project} updateProject={updateProject} fullAnalysis={fullAnalysis} reducedAnalysis={reducedAnalysis} onPrev={() => goToStep(9)} />
+            )}
+          </>
+        )}
       </main>
 
-      <nav className="md:hidden bg-theme-card border-t border-theme fixed bottom-0 w-full flex justify-between px-1 py-1.5 shadow-[0_-4px_15px_rgba(0,0,0,0.05)] z-30 transition-colors duration-300">
-        {tabs.map(tab => {
-          const Icon = tab.icon;
-          const isActive = currentTab === tab.id;
-          return (
-            <button key={tab.id} onClick={() => setCurrentTab(tab.id)}
-              className={`flex-1 flex flex-col items-center justify-center p-2 rounded-xl transition-all ${isActive ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/30 font-bold' : 'text-sky-400 font-medium'}`}>
-              <Icon size={22} strokeWidth={isActive ? 2.5 : 2} className={isActive ? 'mb-1' : 'mb-1 opacity-70'} />
-              <span className="text-[10px]">{t(`tabs.${tab.id}`)}</span>
-            </button>
-          );
-        })}
-      </nav>
-
-      <input ref={excelRef} type="file" accept=".xlsx,.xls" onChange={handleExcelUpload} style={{ display: 'none' }} />
-      <input ref={verifyExcelRef} type="file" accept=".xlsx,.xls" onChange={handleVerifyUpload} style={{ display: 'none' }} />
-
-      <ProjectVault
-        t={t}
-        showProjectPanel={showProjectPanel} setShowProjectPanel={setShowProjectPanel}
-        projectName={projectName} setProjectName={setProjectName}
-        saveProject={saveProject} dbLoading={dbLoading} runs={runs}
-        projectId={projectId} industry={industry} loadProjectList={loadProjectList}
-        projectList={projectList || []} loadProjectDetail={loadProjectDetail}
-        deleteProject={deleteProject}
-        compareIds={compareIds}
-        toggleCompare={toggleCompare}
-        setCurrentTab={setCurrentTab}
+      <SaveListModal
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        savedProjects={savedProjects}
+        onSelectProject={handleLoadProject}
+        onDeleteProject={handleDeleteProject}
+        onImportFile={handleImportFile}
       />
     </div>
   );

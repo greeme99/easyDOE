@@ -1,17 +1,32 @@
 # DESIGN.md (Project Design System Source of Truth)
 
-본 문서는 현재 프로젝트 전용 디자인 토큰 및 디자인 시스템 수칙(1순위 소스 오브 트루스)이다.
-
+---
+version: alpha
+name: Coinbase-design-analysis
+description: Institutional-grade white canvas (#ffffff), Coinbase Blue (#0052ff) primary voltage, deep near-black editorial heroes (#0a0b0d) with elevated dark cards (#16181c), display weight 400, pill CTAs (100px), and 24px card radius.
 ---
 
-## 0. Source of Truth Rules
-- 현재 프로젝트에 선언된 토큰 및 가이드라인이 전역 가이드라인보다 우선 적용된다.
-- 새로운 디자인 값(색상, 폰트, 여백) 임의 생성을 금지하고 `DESIGN.md` 토큰을 준수한다.
-- 디자인 수정 후에는 `npm.cmd run design:lint`를 실행한다.
+## Colors
+- **Primary**: `#0052ff` (Active: `#003ecc`, Disabled: `#a8b8cc`)
+- **Canvas**: `#ffffff`
+- **Surface Soft**: `#f7f7f7`
+- **Surface Strong**: `#eef0f3`
+- **Surface Dark**: `#0a0b0d` (Elevated: `#16181c`)
+- **Ink / Body Strong**: `#0a0b0d`
+- **Body**: `#5b616e`
+- **Muted**: `#7c828a` (Soft: `#a8acb3`)
+- **Hairline**: `#dee1e6` (Soft: `#eef0f3`)
+- **Semantic Up**: `#05b169` (text only)
+- **Semantic Down**: `#cf202f` (text only)
+- **Accent Yellow**: `#f4b000` (illustrative only)
 
----
+## Typography
+- **Display**: `Inter`, weight `400`, negative letter-spacing (`-0.02em`)
+- **Body / UI**: `Inter`, `Noto Sans KR`, weight `400` / `600` / `700`
+- **Numbers**: `JetBrains Mono`, weight `500`, `tabular-nums`
 
-## 1. Project Tokens
-- **Theme**: Light Mode / Dark Mode Dual Theme Supported
-- **Primary Color**: `var(--color-primary, #0066ff)`
-- **Data Table Sort Symbols**: 비활성 `⇅` (opacity 0.35 muted), 활성 `▲`/`▼` (bold/primary)
+## Shapes
+- **Pill**: `100px` (all CTA buttons, badges, search pills)
+- **Card (`xl`)**: `24px` (cards, hero bands, product-UI mockups)
+- **Input (`md`)**: `12px` (form inputs)
+- **Full**: `9999px` (circular icons, step numbers)
